@@ -300,6 +300,26 @@ const I18N = {
 "бесплатно":"free",
 "текущая":"current",
 "Выбрать":"Select",
+"Население 6+":"Population 6+",
+"Население 8+":"Population 8+",
+"Нужен ангар-шлюз":"Requires a hangar lock",
+"Нужен арсенал":"Requires an armory",
+"Отсек ур. 3+":"A compartment at lvl 3+",
+"Отсек ур. 4+":"A compartment at lvl 4+",
+"Отсек ур. 5 (элитный)":"An elite (lvl 5) compartment",
+"Житель ур. 8+":"A resident at lvl 8+",
+"✦ Элитный отсек — максимальный уровень":"✦ Elite compartment — max level",
+"» объединён с соседним того же уровня — теперь ×":"» merged with the neighbour of the same level — now ×",
+"🔬 Даёт очки исследований · нужен экипаж":"🔬 Generates research points · needs crew",
+"Производит":"Produces",
+"нужен экипаж":"needs crew",
+"👥 Повышает лимит населения":"👥 Raises the population cap",
+"📦 Повышает запас ресурсов":"📦 Raises resource storage",
+"⛑ Лечит раненых членов экипажа":"⛑ Heals wounded crew",
+"🏋 Тренирует характеристики экипажа":"🏋 Trains crew stats",
+"🚪 Открывает экспедиции в бездну":"🚪 Unlocks expeditions into the abyss",
+"🛡 Усиливает оборону станции в бою":"🛡 Boosts station defense in combat",
+"Отсек уже элитный — максимальный уровень":"This compartment is already elite — max level",
 "Скрыть обучение насовсем? Подсказки-задачи больше не появятся.":"Hide the tutorial for good? Objective hints will no longer appear.",
 "Реклама недоступна":"Ad unavailable",
 "⚡ Ускорение производства ×2 на 4 часа.":"⚡ Production boosted ×2 for 4 hours.",
@@ -752,16 +772,17 @@ const RAR_KEYS=Object.keys(RARITY);
 
 // Исследования
 const RESEARCH = {
-  life1:{n:T("Замкнутый цикл"),ic:"♻",desc:T("+20% к кислороду, воде и провизии."),cost:28,req:[],eff:{lifeMult:0.2}},
-  power1:{n:T("Сверхпроводники"),ic:"⚡",desc:T("+25% к выработке энергии."),cost:34,req:[],eff:{powerMult:0.25}},
-  eff1:{n:T("Автоматизация"),ic:"🤖",desc:T("+15% ко всему производству."),cost:48,req:["power1"],eff:{allMult:0.15}},
-  armor1:{n:T("Композитная броня"),ic:"🛡",desc:T("+30% к прочности отсеков в бою."),cost:40,req:[],eff:{roomArmor:0.3}},
-  weap1:{n:T("Тактика роя"),ic:"⚔",desc:T("+30% к урону экипажа в бою."),cost:40,req:["armor1"],eff:{dmgMult:0.3}},
-  exp1:{n:T("Глубинные маяки"),ic:"📡",desc:T("+40% к добыче из экспедиций, риск ↓."),cost:40,req:[],eff:{expMult:0.4}},
-  eff2:{n:T("Нейросеть станции"),ic:"🧬",desc:T("+25% ко всему производству."),cost:84,req:["eff1"],eff:{allMult:0.25}},
-  pop1:{n:T("Программа колонии"),ic:"👶",desc:T("Прирост населения вдвое быстрее."),cost:52,req:["life1"],eff:{popMult:1}},
-  build1:{n:T("Модульная сборка"),ic:"🏗",desc:T("−20% к стоимости постройки и улучшений."),cost:60,req:["eff1"],eff:{buildDisc:0.2}},
-  weap2:{n:T("Абиссальное оружие"),ic:"💥",desc:T("Ещё +40% к урону экипажа."),cost:96,req:["weap1","exp1"],eff:{dmgMult:0.4}},
+  // Порядок = порядок показа. Первое дешёвое, дальше дороже; часть закрыта условиями (gate).
+  life1:{n:T("Замкнутый цикл"),ic:"♻",desc:T("+20% к кислороду, воде и провизии."),cost:12,req:[],eff:{lifeMult:0.2}},
+  power1:{n:T("Сверхпроводники"),ic:"⚡",desc:T("+25% к выработке энергии."),cost:30,req:[],eff:{powerMult:0.25}},
+  armor1:{n:T("Композитная броня"),ic:"🛡",desc:T("+30% к прочности отсеков в бою."),cost:36,req:[],gate:{ok:()=>S.dwellers.length>=6,t:"Население 6+"},eff:{roomArmor:0.3}},
+  exp1:{n:T("Глубинные маяки"),ic:"📡",desc:T("+40% к добыче из экспедиций, риск ↓."),cost:44,req:[],gate:{ok:()=>hasRoom("hangar"),t:"Нужен ангар-шлюз"},eff:{expMult:0.4}},
+  eff1:{n:T("Автоматизация"),ic:"🤖",desc:T("+15% ко всему производству."),cost:60,req:["power1"],gate:{ok:()=>S.rooms.some(r=>r.lvl>=3),t:"Отсек ур. 3+"},eff:{allMult:0.15}},
+  pop1:{n:T("Программа колонии"),ic:"👶",desc:T("Прирост населения вдвое быстрее."),cost:70,req:["life1"],gate:{ok:()=>S.dwellers.length>=8,t:"Население 8+"},eff:{popMult:1}},
+  weap1:{n:T("Тактика роя"),ic:"⚔",desc:T("+30% к урону экипажа в бою."),cost:80,req:["armor1"],gate:{ok:()=>hasRoom("armory"),t:"Нужен арсенал"},eff:{dmgMult:0.3}},
+  build1:{n:T("Модульная сборка"),ic:"🏗",desc:T("−20% к стоимости постройки и улучшений."),cost:100,req:["eff1"],gate:{ok:()=>S.rooms.some(r=>r.lvl>=4),t:"Отсек ур. 4+"},eff:{buildDisc:0.2}},
+  eff2:{n:T("Нейросеть станции"),ic:"🧬",desc:T("+25% ко всему производству."),cost:140,req:["eff1"],gate:{ok:()=>S.dwellers.some(d=>d.lvl>=8),t:"Житель ур. 8+"},eff:{allMult:0.25}},
+  weap2:{n:T("Абиссальное оружие"),ic:"💥",desc:T("Ещё +40% к урону экипажа."),cost:190,req:["weap1","exp1"],gate:{ok:()=>S.rooms.some(r=>r.lvl>=5),t:"Отсек ур. 5 (элитный)"},eff:{dmgMult:0.4}},
 };
 
 // Твари бездны
@@ -785,7 +806,8 @@ const ROOM_TIERS=[
   {cls:"tier-4", star:"var(--gold)"}, // ступень 4 · ур.7+
 ];
 const TIER_NAMES=[T("базовый"),T("улучшенный"),T("продвинутый"),T("элитный")];
-function roomTier(lvl){ if(lvl>=7)return 4; if(lvl>=5)return 3; if(lvl>=3)return 2; return 1; }
+const MAX_ROOM_LVL=5; // выше не улучшить — уровень 5 это «элитный»
+function roomTier(lvl){ if(lvl>=5)return 4; if(lvl>=4)return 3; if(lvl>=2)return 2; return 1; }
 function tierCls(lvl){ return ROOM_TIERS[roomTier(lvl)-1].cls; }
 function tierStars(lvl){ const t=roomTier(lvl); const col=ROOM_TIERS[t-1].star; return `<span class="tstars" style="color:${col}">${"★".repeat(t)}${"☆".repeat(4-t)}</span>`; }
 
@@ -830,8 +852,8 @@ function newGame(){
   addRoom("oxygen",true);
   addRoom("farm",true);
   arrangeGrid();
-  // стартовый экипаж
-  for(let i=0;i<4;i++) S.dwellers.push(makeDweller());
+  // стартовый экипаж (5 — чтобы после назначения троих в реактор/кислород/ферму осталось 2 свободных для экспедиции, не оголяя энергию)
+  for(let i=0;i<5;i++) S.dwellers.push(makeDweller());
   S.dwellers.forEach(initDwellerHp); // без этого при «Начать заново» жители остаются с 0 HP и падают в раненых
   // назначим
   assignDweller(S.dwellers[0].id, S.rooms[1].id);
@@ -1051,6 +1073,27 @@ function placeAndMerge(r){
     }
   }
   for(let f=0; f<=N; f++){ const cells=floorOccupancy(f); for(let c=0;c<FLOOR_W;c++){ if(cells[c]==null){ r.floor=f; r.col=c; return {placed:r}; } } }
+  return null;
+}
+// После улучшения: если сосед того же типа и уровня оказался вплотную — объединить (до ×MAX_SIZE), сохранив экипаж
+function mergeAdjacent(r){
+  const cells=floorOccupancy(r.floor);
+  for(const dir of [-1,1]){
+    const nbCol = dir<0 ? r.col-1 : r.col+(r.size||1);
+    if(nbCol<0||nbCol>=FLOOR_W) continue;
+    const nbId=cells[nbCol]; if(nbId==null||nbId===r.id) continue;
+    const s=roomById(nbId);
+    if(!s||s.type!==r.type||s.lvl!==r.lvl) continue;
+    if((r.size||1)+(s.size||1)>MAX_SIZE) continue;
+    const left=(r.col<=s.col)?r:s, other=(left===r)?s:r;
+    left.col=Math.min(r.col,s.col);
+    left.size=(r.size||1)+(s.size||1);
+    const cap=roomCrewCap(left);
+    roomCrew(other).forEach(d=>{ if(roomCrew(left).length<cap){ d.room=left.id; } else { d.room=null; d.status="idle"; } });
+    S.rooms=S.rooms.filter(x=>x.id!==other.id);
+    left._tierUp=S.t;
+    return left;
+  }
   return null;
 }
 // Есть ли повод показать подсказку про слияние (2+ отсека одного типа или уже есть слитый)
@@ -1516,6 +1559,19 @@ function renderStation(){
   return h;
 }
 
+// Короткая понятная строка «что делает отсек» — из данных комнаты, показывается в стройке
+function roomEffectLabel(type){
+  const def=ROOMS[type];
+  if(def.produces==="research") return T("🔬 Даёт очки исследований · нужен экипаж");
+  if(def.produces) return `${RES[def.produces].ic} ${RES[def.produces].n} · ${T("нужен экипаж")}`;
+  if(def.popCap) return T("👥 Повышает лимит населения");
+  if(type==="storage") return T("📦 Повышает запас ресурсов");
+  if(type==="medbay") return T("⛑ Лечит раненых членов экипажа");
+  if(type==="gym") return T("🏋 Тренирует характеристики экипажа");
+  if(type==="hangar") return T("🚪 Открывает экспедиции в бездну");
+  if(type==="armory") return T("🛡 Усиливает оборону станции в бою");
+  return "";
+}
 function renderBuild(){
   let h=`<div class="panelTitle">${T("Строительство отсеков")}</div>`;
   const t=S.buildTarget;
@@ -1534,6 +1590,7 @@ function renderBuild(){
     const count=S.rooms.filter(r=>r.type===type).length;
     const ok=canAfford(c) && (S.buildTarget!=null || freeCells()>0);
     h+=`<div class="card"><div class="row between"><h3>${def.ic} ${def.n} ${count?`<span class="tag">×${count}</span>`:''}</h3></div>
+      <div class="small" style="color:var(--teal);margin-bottom:3px">${roomEffectLabel(type)}</div>
       <p>${def.desc}</p>
       <div class="row between"><div>${costHtml(c)}</div><button class="btn sm ${ok?'gold':''}" ${ok?'':'disabled'} data-q="build-${type}" onclick="doBuild('${type}')">${T("Построить")}</button></div></div>`;
   });
@@ -1589,7 +1646,7 @@ function renderExpedition(){
     <div class="small mut" style="margin-top:4px">${T("Возврат через")} ${e.left} ${T("с")}</div></div>`;
   });
   if(S.expeditions.length<slots){
-    const avail=S.dwellers.filter(d=>d.status==="idle"||d.status==="working");
+    const avail=S.dwellers.filter(d=>d.status==="idle"||d.status==="working").sort((a,b)=>(a.status==="idle"?0:1)-(b.status==="idle"?0:1)); // свободные — первыми, чтобы не отправлять рабочего с реактора
     h+=`<div class="card"><div class="small mut" style="margin-bottom:6px">${T("Отправить разведчика:")}</div>`;
     if(!avail.length) h+=`<p>${T("Нет свободного экипажа.")}</p>`;
     avail.forEach(d=>{
@@ -1610,11 +1667,13 @@ function renderTech(){
     const r=RESEARCH[k];
     const done=has(k);
     const reqOk=r.req.every(has);
+    const gateOk=!r.gate||r.gate.ok();
     const afford=S.research>=r.cost;
     const reqTxt=r.req.length?`<div class="small mut">${T("Требует:")} ${r.req.map(q=>RESEARCH[q].n).join(", ")}</div>`:"";
+    const gateTxt=(r.gate&&!gateOk)?`<div class="small" style="color:var(--warn)">🔒 ${T(r.gate.t)}</div>`:"";
     h+=`<div class="card" style="${done?'opacity:.65':''}"><div class="row between"><h3>${r.ic} ${r.n}</h3>${done?`<span class="tag" style="color:var(--ok);border-color:var(--ok)">${T("✓ изучено")}</span>`:`<span class="chip">🔬 ${r.cost}</span>`}</div>
-      <p>${r.desc}</p>${done?'':reqTxt}
-      ${done?'':`<button class="btn sm ${reqOk&&afford?'gold':''}" ${reqOk&&afford?'':'disabled'} data-q="research" onclick="doResearch('${k}')">${reqOk?T("Изучить"):T("Заблокировано")}</button>`}</div>`;
+      <p>${r.desc}</p>${done?'':reqTxt}${done?'':gateTxt}
+      ${done?'':`<button class="btn sm ${reqOk&&gateOk&&afford?'gold':''}" ${reqOk&&gateOk&&afford?'':'disabled'} data-q="research" onclick="doResearch('${k}')">${reqOk&&gateOk?T("Изучить"):T("Заблокировано")}</button>`}</div>`;
   });
   return h;
 }
@@ -1687,10 +1746,14 @@ function openRoom(id){
     h+=`<div class="sep"></div><div class="small mut">${T("⧉ Объединённый блок из")} <b>${size}</b> ${T("отсеков (")}${size} ${T("клетки в ряду). Улучшается целиком, вмещает больше экипажа и экономит энергию.")}</div>`;
   }
 
-  // улучшение
-  const uc=upgradeCost(r);
-  const okU=canAfford(uc);
-  h+=`<div class="sep"></div><div class="row between"><div><div class="small" style="font-weight:600">${T("Улучшить до ур.")}${r.lvl+1}</div><div class="small mut">${costHtml(uc)}</div></div><button class="btn ${okU?'gold':''}" ${okU?'':'disabled'} data-q="upgrade" onclick="doUpgrade(${id})">${T("▲ Улучшить")}</button></div>`;
+  // улучшение (уровень 5 — предел, отсек становится элитным)
+  if(r.lvl>=MAX_ROOM_LVL){
+    h+=`<div class="sep"></div><div class="row between"><div class="small" style="font-weight:600;color:var(--gold)">${T("✦ Элитный отсек — максимальный уровень")}</div>${tierStars(r.lvl)}</div>`;
+  } else {
+    const uc=upgradeCost(r);
+    const okU=canAfford(uc);
+    h+=`<div class="sep"></div><div class="row between"><div><div class="small" style="font-weight:600">${T("Улучшить до ур.")}${r.lvl+1}</div><div class="small mut">${costHtml(uc)}</div></div><button class="btn ${okU?'gold':''}" ${okU?'':'disabled'} data-q="upgrade" onclick="doUpgrade(${id})">${T("▲ Улучшить")}</button></div>`;
+  }
   if(!def.core){
     h+=`<div style="margin-top:10px"><button class="btn sm warnb" onclick="demolish(${id})">${T("Снести отсек")}</button></div>`;
   }
@@ -1791,7 +1854,9 @@ function doBuild(type){
   setTab("station");
 }
 function doUpgrade(id){
-  const r=roomById(id); const c=upgradeCost(r);
+  const r=roomById(id);
+  if(r.lvl>=MAX_ROOM_LVL){ toast(T("Отсек уже элитный — максимальный уровень"),"bad"); return; }
+  const c=upgradeCost(r);
   if(!canAfford(c)) return;
   const oldTier=roomTier(r.lvl);
   pay(c); r.lvl++;
@@ -1803,7 +1868,9 @@ function doUpgrade(id){
   } else {
     logEvent("▲ «"+ROOMS[r.type].n+T("» улучшен до ур.")+r.lvl+".","good");
   }
-  openRoom(id); render();
+  const m=mergeAdjacent(r); // если рядом такой же отсек того же уровня — объединятся
+  if(m){ logEvent(`⧉ «${ROOMS[m.type].n}${T("» объединён с соседним того же уровня — теперь ×")}${m.size}.`,"gold"); toast(`⧉ ${ROOMS[m.type].n} ×${m.size}`,"good"); }
+  openRoom((m||r).id); render();
 }
 function demolish(id){
   const r=roomById(id);
@@ -1817,7 +1884,7 @@ function demolish(id){
 }
 function doResearch(k){
   const r=RESEARCH[k];
-  if(S.research<r.cost||!r.req.every(has)) return;
+  if(S.research<r.cost||!r.req.every(has)||(r.gate&&!r.gate.ok())) return;
   S.research-=r.cost; S.researched.push(k);
   logEvent(T("🔬 Изучено: <b>")+r.n+"</b>.","gold");
   toast(T("🔬 Открытие: ")+r.n,"good");
