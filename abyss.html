@@ -402,7 +402,7 @@ const I18N = {
 "Лаборатория": "Laboratory",
 "Генерирует очки исследований.": "Generates research points.",
 "Жилой отсек": "Quarters",
-"+6 к лимиту населения. Харизма ускоряет прирост.": "+6 population cap. Charisma speeds up growth.",
+"+3 к лимиту населения. Харизма ускоряет прирост.": "+3 population cap. Charisma speeds up growth.",
 "Лазарет": "Medbay",
 "Лечит раненых членов экипажа.": "Heals wounded crew members.",
 "Склад": "Storage",
@@ -704,10 +704,10 @@ const ROOMS = {
   oxygen:{n:T("Кислородная станция"),ic:"🫧",stat:"end",produces:"oxygen",base:5,power:3,desc:T("Электролиз воды в кислород. Дышите."),baseCost:{metal:35}},
   farm:{n:T("Гидропонная ферма"),ic:"🥬",stat:"end",produces:"food",base:5,power:2,desc:T("Выращивает провизию под лампами."),baseCost:{metal:35}},
   desal:{n:T("Опреснитель"),ic:"💧",stat:"int",produces:"water",base:5,power:2,desc:T("Забортная вода → питьевая."),baseCost:{metal:35}},
-  workshop:{n:T("Мастерская"),ic:"🔩",stat:"str",produces:"metal",base:3,power:2,desc:T("Переплавка обломков в металл. Здесь крафтят снаряжение."),baseCost:{metal:40,credits:20}},
-  market:{n:T("Торговый шлюз"),ic:"💠",stat:"cha",produces:"credits",base:3,power:2,desc:T("Торговля с проходящими субмаринами."),baseCost:{metal:40}},
+  workshop:{n:T("Мастерская"),ic:"🔩",stat:"str",produces:"metal",base:2,power:2,desc:T("Переплавка обломков в металл. Здесь крафтят снаряжение."),baseCost:{metal:40,credits:20}},
+  market:{n:T("Торговый шлюз"),ic:"💠",stat:"cha",produces:"credits",base:2,power:2,desc:T("Торговля с проходящими субмаринами."),baseCost:{metal:40}},
   lab:{n:T("Лаборатория"),ic:"🔬",stat:"int",produces:"research",base:1.2,power:3,desc:T("Генерирует очки исследований."),baseCost:{metal:55,credits:40}},
-  quarters:{n:T("Жилой отсек"),ic:"🛏",stat:"cha",produces:null,power:1,desc:T("+6 к лимиту населения. Харизма ускоряет прирост."),baseCost:{metal:30},popCap:6},
+  quarters:{n:T("Жилой отсек"),ic:"🛏",stat:"cha",produces:null,power:1,desc:T("+3 к лимиту населения. Харизма ускоряет прирост."),baseCost:{metal:30},popCap:3},
   medbay:{n:T("Лазарет"),ic:"⛑",stat:"int",produces:null,power:2,desc:T("Лечит раненых членов экипажа."),baseCost:{metal:45,credits:20}},
   storage:{n:T("Склад"),ic:"📦",stat:null,produces:null,power:0,desc:T("+250 к запасу всех ресурсов."),baseCost:{metal:35}},
   gym:{n:T("Тренировочный зал"),ic:"🏋",stat:null,produces:null,power:2,desc:T("Экипаж качает характеристики."),baseCost:{metal:45}},
@@ -832,6 +832,7 @@ function newGame(){
   arrangeGrid();
   // стартовый экипаж
   for(let i=0;i<4;i++) S.dwellers.push(makeDweller());
+  S.dwellers.forEach(initDwellerHp); // без этого при «Начать заново» жители остаются с 0 HP и падают в раненых
   // назначим
   assignDweller(S.dwellers[0].id, S.rooms[1].id);
   assignDweller(S.dwellers[1].id, S.rooms[2].id);
@@ -1099,8 +1100,8 @@ function upgradeCost(r){
   const base=def.baseCost&&Object.keys(def.baseCost).length?def.baseCost:{metal:20};
   const disc=1-eff("buildDisc");
   const c={};
-  for(const k in base) c[k]=Math.ceil((base[k]||20)*Math.pow(1.5,r.lvl)*0.9*disc);
-  if(Object.keys(c).length===0) c.metal=Math.ceil(25*Math.pow(1.5,r.lvl));
+  for(const k in base) c[k]=Math.ceil((base[k]||20)*Math.pow(1.65,r.lvl)*disc);
+  if(Object.keys(c).length===0) c.metal=Math.ceil(25*Math.pow(1.65,r.lvl));
   return c;
 }
 function canAfford(c){ for(const k in c){ if((S.res[k]||0)<c[k]) return false;} return true; }
@@ -1167,7 +1168,7 @@ function tickOnce(offline){
     if(def.produces==="research"){ S.research+=out; }
     else { S.res[def.produces]=clamp((S.res[def.produces]||0)+out,0,cap); }
   });
-  if(cmd){ ["oxygen","food","water","metal"].forEach(k=>{ S.res[k]=clamp(S.res[k]+0.4*cmd.lvl,0,cap); }); S.research+=0.05*cmd.lvl; }
+  if(cmd){ ["oxygen","food","water"].forEach(k=>{ S.res[k]=clamp(S.res[k]+0.2*cmd.lvl,0,cap); }); S.res.metal=clamp(S.res.metal+0.1*cmd.lvl,0,cap); S.research+=0.03*cmd.lvl; }
 
   // Потребление жизнеобеспечения
   const pop=S.dwellers.length;
@@ -1208,9 +1209,13 @@ function tickOnce(offline){
   S.dwellers.forEach(d=>{ if(d.status==="working"){ d.xp+=0.8; const need=d.lvl*20; if(d.xp>=need){ d.xp-=need; d.lvl++; initDwellerHp(d); if(!offline)logEvent("<b>"+d.name+T("</b> достиг уровня ")+d.lvl+".","good"); }}});
 
   // Прирост населения
+  // Новобранцы приходят только если есть жильё (жилой отсек) и хватает провизии/воды.
   if(pop<popCap()){
-    let growth=0.02;
-    S.rooms.filter(r=>r.type==="quarters").forEach(r=>{ roomCrew(r).forEach(d=>{ let g=d.stats.cha*0.01*r.lvl; const sp=specOf(d); if(sp.pop) g*=(1+sp.pop); growth+=g; }); });
+    let growth=0.01; // без жилья прирост почти нулевой
+    S.rooms.filter(r=>r.type==="quarters").forEach(r=>{
+      growth += 0.8*r.lvl*(r.size||1); // сам жилой отсек привлекает людей
+      roomCrew(r).forEach(d=>{ let g=d.stats.cha*0.05*r.lvl; const sp=specOf(d); if(sp.pop) g*=(1+sp.pop); growth+=g; }); // харизматичный смотритель ускоряет
+    });
     if(eff("popMult")>0) growth*=2;
     if(S.res.food>50&&S.res.water>50){
       S._grow=(S._grow||0)+growth;
