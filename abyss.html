@@ -2,8 +2,8 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>БЕЗДНА — Станция Нерей</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Бездна</title>
 <script src="/sdk.js"></script>
 <style>
 :root{
@@ -16,31 +16,40 @@
   --o2:#7fd8ff; --pw:#ffce54; --food:#8ee06a; --water:#5fb8ff; --metal:#c9b79c; --cred:#ffd76b; --res:#c98bff;
 }
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
-html,body{margin:0;height:100%;overflow:hidden}
+/* Выделение текста и системное контекстное меню отключены во всей игре:
+   долгий тап на Android/iOS и правый клик на десктопе не должны ничего вызывать. */
+html,body,#app,#intro,#modal,#toasts,svg{
+  -webkit-user-select:none; -moz-user-select:none; -ms-user-select:none; user-select:none;
+  -webkit-touch-callout:none; -webkit-user-drag:none;
+}
+html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none}
 body{
   font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
   color:var(--txt);
   background:radial-gradient(120% 90% at 50% -10%, #0d2f4d 0%, var(--bg1) 40%, var(--bg0) 100%);
-  user-select:none; position:relative;
+  position:relative;
+  /* manipulation, а не none: убирает зум по двойному тапу, но оставляет прокрутку списков */
+  touch-action:manipulation;
 }
+img,svg{max-width:100%}
 #bubbles{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
 .bub{position:absolute;bottom:-40px;border-radius:50%;background:radial-gradient(circle at 30% 30%,rgba(180,240,255,.55),rgba(80,180,220,.06));animation:rise linear infinite}
 @keyframes rise{to{transform:translateY(-115vh) translateX(30px);opacity:0}}
 #app{position:relative;z-index:1;display:flex;flex-direction:column;height:100vh}
 
 /* Topbar */
-#top{display:flex;flex-wrap:wrap;gap:6px;padding:8px 8px 6px;background:linear-gradient(180deg,rgba(4,12,24,.9),rgba(4,12,24,.4));border-bottom:1px solid var(--line);backdrop-filter:blur(6px)}
+#top{display:flex;flex-wrap:wrap;gap:6px;padding:calc(8px + env(safe-area-inset-top)) calc(8px + env(safe-area-inset-right)) 6px calc(8px + env(safe-area-inset-left));background:linear-gradient(180deg,rgba(4,12,24,.9),rgba(4,12,24,.4));border-bottom:1px solid var(--line);backdrop-filter:blur(6px)}
 .stat{flex:1 1 auto;min-width:88px;background:var(--glass);border:1px solid var(--line);border-radius:10px;padding:5px 8px;display:flex;flex-direction:column;gap:1px;position:relative;overflow:hidden}
 .stat .lab{font-size:10px;color:var(--dim);letter-spacing:.4px;display:flex;align-items:center;gap:3px}
 .stat .val{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums}
 .stat .rate{font-size:10px;font-variant-numeric:tabular-nums}
 .stat .bar{position:absolute;left:0;bottom:0;height:3px;background:var(--cyan);opacity:.5;transition:width .4s}
 .rate.pos{color:var(--ok)} .rate.neg{color:var(--warn)}
-.stationName{width:100%;display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--dim);letter-spacing:1px}
+.stationName{width:100%;display:flex;flex-wrap:wrap;gap:2px 8px;justify-content:space-between;align-items:center;font-size:12px;color:var(--dim);letter-spacing:1px}
 .stationName b{color:var(--cyan);letter-spacing:2px;font-size:13px}
 
 /* Main */
-#main{flex:1;overflow-y:auto;padding:10px 8px 88px;-webkit-overflow-scrolling:touch}
+#main{flex:1;overflow-y:auto;overflow-x:hidden;padding:10px calc(8px + env(safe-area-inset-right)) calc(96px + env(safe-area-inset-bottom)) calc(8px + env(safe-area-inset-left));-webkit-overflow-scrolling:touch}
 .panelTitle{font-size:13px;letter-spacing:1px;color:var(--cyan);margin:2px 2px 8px;text-transform:uppercase}
 
 /* Station — 2D-сетка: этажи + лифтовая шахта */
@@ -73,7 +82,7 @@ body{
 #introArt .win{animation:winblink 4s ease-in-out infinite}
 .gcell.target{opacity:1;border:2px solid var(--gold);color:var(--gold);animation:tgt 1.2s ease-in-out infinite}
 @keyframes tgt{0%,100%{box-shadow:0 0 0 0 rgba(255,206,84,.35)}50%{box-shadow:0 0 0 6px rgba(255,206,84,0)}}
-.floorbuy{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;border:1px dashed var(--line2);border-radius:10px;min-height:52px;color:var(--dim);font-size:12px;cursor:pointer}
+.floorbuy{flex:1;min-width:0;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px 8px;border:1px dashed var(--line2);border-radius:10px;min-height:52px;padding:6px;text-align:center;color:var(--dim);font-size:12px;cursor:pointer}
 .floorbuy:active{opacity:.7}
 .room{background:linear-gradient(180deg,var(--glass),rgba(6,20,34,.75));border:1px solid var(--line);border-radius:10px;padding:6px 8px;display:flex;flex-direction:column;justify-content:center;gap:2px;position:relative;overflow:hidden;cursor:pointer;transition:border .2s,transform .05s;min-width:0}
 .room:active{transform:scale(.98)}
@@ -172,18 +181,19 @@ body{
 .cost .no{color:var(--warn)}
 
 /* Bottom nav */
-#nav{position:fixed;bottom:0;left:0;right:0;z-index:5;display:flex;background:var(--glass2);border-top:1px solid var(--line2);backdrop-filter:blur(10px)}
-.nav-b{flex:1;padding:8px 2px 10px;text-align:center;cursor:pointer;color:var(--dim);font-size:10px;position:relative;transition:color .15s}
+#nav{position:fixed;bottom:0;left:0;right:0;z-index:5;display:flex;background:var(--glass2);border-top:1px solid var(--line2);backdrop-filter:blur(10px);padding-bottom:env(safe-area-inset-bottom)}
+.nav-b{flex:1;min-width:0;padding:8px 2px 10px;text-align:center;cursor:pointer;color:var(--dim);font-size:10px;line-height:1.2;position:relative;transition:color .15s;overflow:hidden}
 .nav-b .ni{font-size:19px;display:block;margin-bottom:1px}
 .nav-b.act{color:var(--cyan)}
 .nav-b.act::after{content:'';position:absolute;top:0;left:20%;right:20%;height:2px;background:var(--cyan);box-shadow:0 0 8px var(--cyan)}
 .nav-b .badge{position:absolute;top:2px;right:calc(50% - 22px);background:var(--warn);color:#fff;font-size:9px;border-radius:8px;padding:0 4px;min-width:14px;font-weight:700}
+.nav-b .badge.newb{right:auto;left:50%;transform:translateX(-50%);top:0;font-size:8px;letter-spacing:.2px}
 
 /* cards / lists */
 .card{background:var(--glass);border:1px solid var(--line);border-radius:12px;padding:11px;margin-bottom:9px}
-.card h3{margin:0 0 4px;font-size:14px;display:flex;align-items:center;gap:7px}
+.card h3{margin:0 0 4px;font-size:14px;display:flex;flex-wrap:wrap;align-items:center;gap:4px 7px;min-width:0;overflow-wrap:anywhere}
 .card p{margin:3px 0;font-size:12px;color:var(--dim);line-height:1.4}
-.row{display:flex;align-items:center;gap:8px}
+.row{display:flex;align-items:center;gap:8px;min-width:0}
 .row.between{justify-content:space-between}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .chip{display:inline-flex;align-items:center;gap:3px;font-size:11px;background:rgba(90,200,230,.1);border:1px solid var(--line);border-radius:6px;padding:2px 6px;margin:2px 3px 0 0}
@@ -193,9 +203,9 @@ body{
 /* Modal */
 #modal{position:fixed;inset:0;z-index:20;background:rgba(2,6,14,.72);backdrop-filter:blur(4px);display:none;align-items:flex-end;justify-content:center}
 #modal.show{display:flex}
-.sheet{width:100%;max-width:560px;max-height:88vh;overflow-y:auto;background:linear-gradient(180deg,var(--bg2),var(--bg1));border:1px solid var(--line2);border-radius:18px 18px 0 0;padding:14px 14px 26px;box-shadow:0 -10px 40px rgba(0,0,0,.6)}
+.sheet{width:100%;max-width:560px;max-height:88vh;overflow-y:auto;overflow-x:hidden;background:linear-gradient(180deg,var(--bg2),var(--bg1));border:1px solid var(--line2);border-radius:18px 18px 0 0;padding:14px 14px calc(26px + env(safe-area-inset-bottom));box-shadow:0 -10px 40px rgba(0,0,0,.6)}
 .sheet .grip{width:44px;height:4px;background:var(--line2);border-radius:3px;margin:0 auto 12px}
-.sheet h2{margin:0 0 2px;font-size:19px;display:flex;align-items:center;gap:9px}
+.sheet h2{margin:0 0 2px;font-size:19px;display:flex;flex-wrap:wrap;align-items:center;gap:4px 9px;overflow-wrap:anywhere}
 .mut{color:var(--dim);font-size:12px}
 
 /* dweller portrait */
@@ -224,17 +234,30 @@ body{
 .sep{height:1px;background:var(--line);margin:9px 0}
 ::-webkit-scrollbar{width:0;height:0}
 
-/* intro */
-#intro{position:fixed;inset:0;z-index:50;background:radial-gradient(120% 90% at 50% 0,#0d2f4d,#03060f);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;gap:14px}
-#intro h1{font-size:34px;letter-spacing:8px;margin:0;color:var(--cyan);text-shadow:0 0 24px rgba(57,215,230,.6)}
-#intro .sub{color:var(--dim);letter-spacing:3px;font-size:13px}
-#intro p{max-width:440px;font-size:13px;color:var(--txt);line-height:1.6;opacity:.9}
+/* intro — вписывается в любой экран, включая низкий ландшафт */
+#intro{position:fixed;inset:0;z-index:50;background:radial-gradient(120% 90% at 50% 0,#0d2f4d,#03060f);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+  gap:min(14px,2.2vh);overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
+#intro h1{font-size:clamp(26px,8vw,34px);letter-spacing:min(8px,2vw);margin:0;color:var(--cyan);text-shadow:0 0 24px rgba(57,215,230,.6);max-width:100%;overflow-wrap:break-word}
+#intro .sub{color:var(--dim);letter-spacing:min(3px,1vw);font-size:clamp(11px,3vw,13px);max-width:100%;overflow-wrap:break-word}
+#intro p{max-width:440px;font-size:13px;color:var(--txt);line-height:1.6;opacity:.9;margin:0}
+#intro>*{flex-shrink:0}
+/* низкий экран (телефон в ландшафте) — прячем крупную иллюстрацию, а не режем её */
+@media (max-height:620px){
+  #introArt{max-width:220px;margin:0 auto}
+  #intro p{font-size:12px;line-height:1.45}
+}
+@media (max-height:440px){
+  #introArt{display:none}
+  #intro p{display:none}
+}
 
 
 /* ================= DESKTOP ================= */
 @media (min-width: 900px){
   body{overflow:hidden}
-  #app{padding-left:64px}
+  #app{padding-left:calc(64px + env(safe-area-inset-left))}
   /* nav — боковая панель слева */
   #nav{position:fixed;left:0;top:0;bottom:0;right:auto;width:64px;flex-direction:column;border-right:1px solid var(--line2);border-top:none;padding:10px 4px;z-index:5}
   .nav-b{padding:10px 2px 12px}
@@ -276,11 +299,11 @@ body{
 <div id="vignette"></div>
 
 <div id="intro">
-  <div class="sub" id="i18nSub1">ГЛУБОКОВОДНАЯ СТАНЦИЯ</div>
-  <h1 id="i18nTitle">БЕЗДНА</h1>
-  <div class="sub" id="i18nSub2">— НЕРЕЙ · ГЛУБИНА 6&nbsp;800&nbsp;М —</div>
-  <svg id="introArt" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 260" > <defs> <linearGradient id="iwat" x1="0" y1="0" x2="0" y2="1"> <stop offset="0" stop-color="#0d3350"/><stop offset="55%" stop-color="#06192c"/><stop offset="1" stop-color="#02070f"/> </linearGradient> <linearGradient id="ibeam" x1="0" y1="0" x2="0" y2="1"> <stop offset="0" stop-color="#7fd8ff" stop-opacity=".30"/><stop offset="1" stop-color="#7fd8ff" stop-opacity="0"/> </linearGradient> <linearGradient id="ihull" x1="0" y1="0" x2="0" y2="1"> <stop offset="0" stop-color="#2b5b7d"/><stop offset="1" stop-color="#0d2438"/> </linearGradient> <linearGradient id="ihull2" x1="0" y1="0" x2="1" y2="0"> <stop offset="0" stop-color="#17405e"/><stop offset="1" stop-color="#0a1e30"/> </linearGradient> <radialGradient id="iglow"><stop offset="0" stop-color="#39d7e6" stop-opacity=".55"/><stop offset="1" stop-color="#39d7e6" stop-opacity="0"/></radialGradient> <filter id="iblur"><feGaussianBlur stdDeviation="3"/></filter> </defs> <rect  fill="url(#iwat)"/> <path d="M60 0 L130 0 L165 260 L20 260 Z" fill="url(#ibeam)" opacity=".55"/> <path d="M240 0 L300 0 L360 260 L250 260 Z" fill="url(#ibeam)" opacity=".35"/> <path d="M0 232 Q70 216 130 228 T260 222 T400 236 L400 260 L0 260 Z" fill="#020509"/> <path d="M0 232 Q70 216 130 228 T260 222 T400 236" fill="none" stroke="#12405c" stroke-width="1.2" opacity=".7"/> <g opacity=".30" filter="url(#iblur)"> <path d="M18 150 q30 -22 62 -8 q-14 12 -30 12 q10 10 4 18 q-16 -6 -22 -16 q-10 4 -14 -6z" fill="#0b2a3d"/> <circle cx="52" cy="145" r="2.6" fill="#8fe8ff" opacity=".8"/> </g> <ellipse cx="215" cy="150" rx="120" ry="86" fill="url(#iglow)" opacity=".5"/> <g> <rect x="207" y="72" width="16" height="140" rx="3" fill="url(#ihull)" stroke="#39d7e6" stroke-opacity=".45"/> <g stroke="#39d7e6" stroke-opacity=".35" stroke-width="1"> <line x1="209" y1="86" x2="221" y2="86"/><line x1="209" y1="102" x2="221" y2="102"/> <line x1="209" y1="118" x2="221" y2="118"/><line x1="209" y1="134" x2="221" y2="134"/> <line x1="209" y1="150" x2="221" y2="150"/><line x1="209" y1="166" x2="221" y2="166"/> <line x1="209" y1="182" x2="221" y2="182"/><line x1="209" y1="198" x2="221" y2="198"/> </g> <path d="M195 74 a20 18 0 0 1 40 0 z" fill="url(#ihull)" stroke="#39d7e6" stroke-opacity=".5"/> <circle cx="215" cy="66" r="3" fill="#ffce54"/> <circle cx="215" cy="66" r="7" fill="#ffce54" opacity=".22"/> <rect x="128" y="88" width="76" height="34" rx="7" fill="url(#ihull2)" stroke="#39d7e6" stroke-opacity=".5"/> <rect x="226" y="88" width="66" height="34" rx="7" fill="url(#ihull2)" stroke="#39d7e6" stroke-opacity=".5"/> <rect x="118" y="130" width="86" height="34" rx="7" fill="url(#ihull2)" stroke="#39d7e6" stroke-opacity=".5"/> <rect x="226" y="130" width="80" height="34" rx="7" fill="url(#ihull2)" stroke="#39d7e6" stroke-opacity=".5"/> <rect x="136" y="172" width="68" height="34" rx="7" fill="url(#ihull2)" stroke="#39d7e6" stroke-opacity=".5"/> <rect x="226" y="172" width="58" height="34" rx="7" fill="url(#ihull2)" stroke="#39d7e6" stroke-opacity=".5"/> <g> <rect x="136" y="97" width="16" height="16" rx="3" fill="#ffce54" opacity=".85"/> <rect x="158" y="97" width="16" height="16" rx="3" fill="#7fd8ff" opacity=".75"/> <rect x="180" y="97" width="16" height="16" rx="3" fill="#8ee06a" opacity=".7"/> <rect x="234" y="97" width="16" height="16" rx="3" fill="#c98bff" opacity=".7"/> <rect x="256" y="97" width="16" height="16" rx="3" fill="#5fb8ff" opacity=".6"/> <rect x="126" y="139" width="16" height="16" rx="3" fill="#5fb8ff" opacity=".7"/> <rect x="148" y="139" width="16" height="16" rx="3" fill="#ffce54" opacity=".9"/> <rect x="170" y="139" width="16" height="16" rx="3" fill="#ff9bb0" opacity=".6"/> <rect x="234" y="139" width="16" height="16" rx="3" fill="#8ee06a" opacity=".75"/> <rect x="256" y="139" width="16" height="16" rx="3" fill="#ffce54" opacity=".8"/> <rect x="278" y="139" width="16" height="16" rx="3" fill="#39d7e6" opacity=".55"/> <rect x="144" y="181" width="16" height="16" rx="3" fill="#ff6b6b" opacity=".6"/> <rect x="166" y="181" width="16" height="16" rx="3" fill="#7fd8ff" opacity=".7"/> <rect x="234" y="181" width="16" height="16" rx="3" fill="#ffce54" opacity=".7"/> <rect x="256" y="181" width="16" height="16" rx="3" fill="#2fe0b0" opacity=".6"/> </g> <path d="M150 206 L142 231 M196 206 L200 230 M244 206 L240 231 M276 206 L286 233" stroke="#12405c" stroke-width="3" stroke-linecap="round" fill="none"/> </g> <g fill="#bfeeff" opacity=".35"> <circle cx="330" cy="120" r="2.5"/><circle cx="342" cy="92" r="1.8"/><circle cx="322" cy="66" r="1.3"/> <circle cx="96" cy="118" r="2"/><circle cx="86" cy="88" r="1.4"/><circle cx="104" cy="62" r="1"/> </g> </svg>
-  <p id="i18nIntro">Поверхность потеряна. Вы — начальник станции на дне океана. Стройте отсеки, распределяйте экипаж, добывайте кислород и энергию, отражайте атаки глубоководных тварей и отправляйте разведчиков во тьму за ресурсами. Держите людей живыми.</p>
+  <div class="sub">ГЛУБОКОВОДНАЯ СТАНЦИЯ</div>
+  <h1>Бездна</h1>
+  <div class="sub">— НЕРЕЙ · ГЛУБИНА 6800 М —</div>
+  <svg id="introArt" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 260" > <defs> <linearGradient id="iwat" x1="0" y1="0" x2="0" y2="1"> <stop offset="0" stop-color="#0d3350"/><stop offset="55%" stop-color="#06192c"/><stop offset="1" stop-color="#02070f"/> </linearGradient> <linearGradient id="ibeam" x1="0" y1="0" x2="0" y2="1"> <stop offset="0" stop-color="#7fd8ff" stop-opacity=".30"/><stop offset="1" stop-color="#7fd8ff" stop-opacity="0"/> </linearGradient> <linearGradient id="ihull" x1="0" y1="0" x2="0" y2="1"> <stop offset="0" stop-color="#2b5b7d"/><stop offset="1" stop-color="#0d2438"/> </linearGradient> <linearGradient id="ihull2" x1="0" y1="0" x2="1" y2="0"> <stop offset="0" stop-color="#17405e"/><stop offset="1" stop-color="#0a1e30"/> </linearGradient> <radialGradient id="iglow"><stop offset="0" stop-color="#39d7e6" stop-opacity=".55"/><stop offset="1" stop-color="#39d7e6" stop-opacity="0"/></radialGradient> <filter id="iblur"><feGaussianBlur stdDeviation="3"/></filter> </defs> <rect x="0" y="0" width="400" height="260" fill="url(#iwat)"/> <path d="M60 0 L130 0 L165 260 L20 260 Z" fill="url(#ibeam)" opacity=".55"/> <path d="M240 0 L300 0 L360 260 L250 260 Z" fill="url(#ibeam)" opacity=".35"/> <path d="M0 232 Q70 216 130 228 T260 222 T400 236 L400 260 L0 260 Z" fill="#020509"/> <path d="M0 232 Q70 216 130 228 T260 222 T400 236" fill="none" stroke="#12405c" stroke-width="1.2" opacity=".7"/> <g opacity=".30" filter="url(#iblur)"> <path d="M18 150 q30 -22 62 -8 q-14 12 -30 12 q10 10 4 18 q-16 -6 -22 -16 q-10 4 -14 -6z" fill="#0b2a3d"/> <circle cx="52" cy="145" r="2.6" fill="#8fe8ff" opacity=".8"/> </g> <ellipse cx="215" cy="150" rx="120" ry="86" fill="url(#iglow)" opacity=".5"/> <g> <rect x="207" y="72" width="16" height="140" rx="3" fill="url(#ihull)" stroke="#39d7e6" stroke-opacity=".45"/> <g stroke="#39d7e6" stroke-opacity=".35" stroke-width="1"> <line x1="209" y1="86" x2="221" y2="86"/><line x1="209" y1="102" x2="221" y2="102"/> <line x1="209" y1="118" x2="221" y2="118"/><line x1="209" y1="134" x2="221" y2="134"/> <line x1="209" y1="150" x2="221" y2="150"/><line x1="209" y1="166" x2="221" y2="166"/> <line x1="209" y1="182" x2="221" y2="182"/><line x1="209" y1="198" x2="221" y2="198"/> </g> <path d="M195 74 a20 18 0 0 1 40 0 z" fill="url(#ihull)" stroke="#39d7e6" stroke-opacity=".5"/> <circle cx="215" cy="66" r="3" fill="#ffce54"/> <circle cx="215" cy="66" r="7" fill="#ffce54" opacity=".22"/> <rect x="128" y="88" width="76" height="34" rx="7" fill="url(#ihull2)" stroke="#39d7e6" stroke-opacity=".5"/> <rect x="226" y="88" width="66" height="34" rx="7" fill="url(#ihull2)" stroke="#39d7e6" stroke-opacity=".5"/> <rect x="118" y="130" width="86" height="34" rx="7" fill="url(#ihull2)" stroke="#39d7e6" stroke-opacity=".5"/> <rect x="226" y="130" width="80" height="34" rx="7" fill="url(#ihull2)" stroke="#39d7e6" stroke-opacity=".5"/> <rect x="136" y="172" width="68" height="34" rx="7" fill="url(#ihull2)" stroke="#39d7e6" stroke-opacity=".5"/> <rect x="226" y="172" width="58" height="34" rx="7" fill="url(#ihull2)" stroke="#39d7e6" stroke-opacity=".5"/> <g> <rect x="136" y="97" width="16" height="16" rx="3" fill="#ffce54" opacity=".85"/> <rect x="158" y="97" width="16" height="16" rx="3" fill="#7fd8ff" opacity=".75"/> <rect x="180" y="97" width="16" height="16" rx="3" fill="#8ee06a" opacity=".7"/> <rect x="234" y="97" width="16" height="16" rx="3" fill="#c98bff" opacity=".7"/> <rect x="256" y="97" width="16" height="16" rx="3" fill="#5fb8ff" opacity=".6"/> <rect x="126" y="139" width="16" height="16" rx="3" fill="#5fb8ff" opacity=".7"/> <rect x="148" y="139" width="16" height="16" rx="3" fill="#ffce54" opacity=".9"/> <rect x="170" y="139" width="16" height="16" rx="3" fill="#ff9bb0" opacity=".6"/> <rect x="234" y="139" width="16" height="16" rx="3" fill="#8ee06a" opacity=".75"/> <rect x="256" y="139" width="16" height="16" rx="3" fill="#ffce54" opacity=".8"/> <rect x="278" y="139" width="16" height="16" rx="3" fill="#39d7e6" opacity=".55"/> <rect x="144" y="181" width="16" height="16" rx="3" fill="#ff6b6b" opacity=".6"/> <rect x="166" y="181" width="16" height="16" rx="3" fill="#7fd8ff" opacity=".7"/> <rect x="234" y="181" width="16" height="16" rx="3" fill="#ffce54" opacity=".7"/> <rect x="256" y="181" width="16" height="16" rx="3" fill="#2fe0b0" opacity=".6"/> </g> <path d="M150 206 L142 231 M196 206 L200 230 M244 206 L240 231 M276 206 L286 233" stroke="#12405c" stroke-width="3" stroke-linecap="round" fill="none"/> </g> <g fill="#bfeeff" opacity=".35"> <circle cx="330" cy="120" r="2.5"/><circle cx="342" cy="92" r="1.8"/><circle cx="322" cy="66" r="1.3"/> <circle cx="96" cy="118" r="2"/><circle cx="86" cy="88" r="1.4"/><circle cx="104" cy="62" r="1"/> </g> </svg>
+  <p>Поверхность потеряна. Вы — начальник станции на дне океана. Стройте отсеки, распределяйте экипаж, добывайте кислород и энергию, отражайте атаки глубоководных тварей и отправляйте разведчиков во тьму за ресурсами. Держите людей живыми.</p>
   <button class="btn gold" id="startBtn" style="font-size:16px;padding:12px 28px">ПОГРУЖЕНИЕ ▸</button>
   <button class="btn sm" id="loadBtn" style="opacity:.8">Продолжить сохранение</button>
   <div class="small mut" id="introHint"></div>
@@ -297,6 +320,15 @@ body{
 
 <script>
 "use strict";
+
+/* ===== Игровое поле не должно выделяться и вызывать системные меню =====
+   п. 1.6.2.7 (десктоп: правый клик, выделение) и п. 1.6.1.8 (Android/iOS: долгий тап). */
+document.addEventListener("contextmenu", e=>e.preventDefault());
+document.addEventListener("selectstart", e=>e.preventDefault());
+document.addEventListener("dragstart",   e=>e.preventDefault());
+// iOS: масштабирование щипком и двойным тапом внутри игры
+document.addEventListener("gesturestart",  e=>e.preventDefault());
+document.addEventListener("gesturechange", e=>e.preventDefault());
 
 
 /* ================= МУЗЫКА ================= */
@@ -466,459 +498,11 @@ setInterval(()=>{
   if(S && Math.random()<0.25) sfx('bubble');
 }, 4000);
 
-/* ================= i18n ================= */
-const I18N = {
-"⚡ Энергии не хватает":"⚡ Not enough power",
-"Отсеки работают вполсилы. Улучшите реактор или постройте второй — и поставьте в него людей.":"Compartments are running at reduced output. Upgrade the reactor or build a second one — and staff it.",
-"🎯 Задача":"🎯 Objective",
-"🎯 Задача выполнена:":"🎯 Objective complete:",
-"🎯 Готово!":"🎯 Done!",
-"Награда:":"Reward:",
-"Перейти →":"Go →",
-"Скрыть":"Hide",
-"Обучение скрыто":"Tutorial hidden",
-"Осмотрите отсек":"Inspect a compartment",
-"Нажмите на любой отсек на плане станции. Откроется его карточка: там видно, кто в нём работает, что он производит, и есть кнопка «▲ Улучшить».":"Tap any compartment on the station plan. Its card opens, showing who works there, what it produces, and the ▲ Upgrade button.",
-"Постройте опреснитель":"Build a desalinator",
-"Вода 💧 убывает — на верхней панели у неё красный минус, а производить её нечем. Нажмите ＋ на пустой клетке плана станции и постройте опреснитель.":"Water 💧 is running out — it shows a red minus in the top bar and nothing produces it. Tap ＋ on an empty cell of the station plan and build the Desalinator.",
-"Назначьте жителя в опреснитель":"Staff the desalinator",
-"Отсек без экипажа тускнеет на плане и работает вполсилы. Нажмите на опреснитель и в списке «Назначить» нажмите «＋» напротив свободного жителя.":"A compartment with no crew dims on the plan and runs at half strength. Tap the desalinator and press ＋ next to a free resident in the Assign list.",
-"Улучшите любой отсек до уровня 2":"Upgrade any compartment to level 2",
-"Нажмите на любой отсек и внизу его карточки нажмите «▲ Улучшить». Каждый уровень повышает производство и добавляет место для экипажа.":"Tap any compartment and press ▲ Upgrade at the bottom of its card. Every level raises output and adds room for more crew.",
-"Пробурите новый этаж":"Drill a new deck",
-"На каждом этаже только 3 клетки под отсеки. Прокрутите план станции вниз и нажмите «⚙ Пробурить этаж» — появится место для новых построек.":"Each deck has only 3 cells for compartments. Scroll the station plan down and press ⚙ Drill deck to make room for new builds.",
-"Объедините два одинаковых отсека":"Merge two identical compartments",
-"Нажмите ＋ на пустой клетке рядом с опреснителем, затем в постройке нажмите «Построить» у опреснителя — два одинаковых отсека одного уровня сольются в широкий: больше экипажа, меньше расход энергии.":"Tap ＋ on an empty cell next to the desalinator, then press Build on the Desalinator — two identical compartments of the same level merge into a wide one: more crew, less power drain.",
-"Постройте мастерскую":"Build a workshop",
-"Мастерская производит металл 🔩 и открывает новые отсеки: лабораторию, ангар, лазарет и другие. Нажмите ＋ на пустой клетке плана станции и постройте её. А внутри неё можно собирать снаряжение.":"The workshop produces scrap 🔩 and unlocks new compartments: the laboratory, hangar, medbay and more. Tap ＋ on an empty cell of the station plan and build it. Inside it you can also craft gear.",
-"Соберите снаряжение в мастерской":"Craft gear in the workshop",
-"Нажмите на мастерскую на плане станции — внизу её карточки есть раздел «Крафт снаряжения». Соберите любой предмет: скоро из темноты придут твари, и экипажу понадобится защита.":"Tap the workshop on the station plan — its card has a Craft gear section at the bottom. Craft any item: creatures will soon come out of the dark and your crew will need protection.",
-"Наденьте снаряжение на жителя":"Equip gear on a resident",
-"Откройте вкладку «Экипаж», нажмите на жителя и в разделе «Надеть со склада» выберите предмет. Оружие 🗡 повышает урон в бою, костюм 🛡 добавляет здоровья.":"Open the Crew tab, tap a resident and pick an item under Equip from storage. A weapon 🗡 raises combat damage, a suit 🛡 adds health.",
-"Постройте лабораторию и изучите технологию":"Build a lab and research a technology",
-"Постройте лабораторию: нажмите ＋ на пустой клетке плана станции — и назначьте туда жителя, она начнёт копить очки 🔬. Когда очков хватит, откройте вкладку «Наука» и нажмите «Изучить» у любой технологии: это постоянный бонус.":"Build a laboratory: tap ＋ on an empty cell of the station plan — then assign a resident and it starts accumulating 🔬 points. Once you have enough, open the Science tab and press Research on any technology: the bonus is permanent.",
-"Постройте ангар и отправьте разведчика":"Build a hangar and send a scout",
-"Постройте ангар-шлюз: нажмите ＋ на пустой клетке плана станции, затем откройте вкладку «Бездна» и нажмите «Отправить» у любого жителя. Разведчики приносят металл, кредиты и очки науки; чем глубже — тем богаче добыча, но выше риск ранения.":"Build a hangar lock: tap ＋ on an empty cell of the station plan, then open the Abyss tab and press Send next to any resident. Scouts bring back scrap, credits and research points; the deeper they go, the richer the haul — and the higher the risk of injury.",
-"нет экипажа":"no crew",
-"Назначить в отсек:":"Assign to a compartment:",
-"бонус специализации":"specialization bonus",
-"ключевой навык:":"key skill:",
-"качает":"training",
-"механик: −20% и выше шанс редкости":"mechanic: −20% cost & better rarity odds",
-"редкость выпадает случайно":"rarity rolls randomly",
-"бесплатно":"free",
-"текущая":"current",
-"Выбрать":"Select",
-"Население 6+":"Population 6+",
-"Население 8+":"Population 8+",
-"Нужен ангар-шлюз":"Requires a hangar lock",
-"Нужен арсенал":"Requires an armory",
-"Отсек ур. 3+":"A compartment at lvl 3+",
-"Отсек ур. 4+":"A compartment at lvl 4+",
-"Отсек ур. 5 (элитный)":"An elite (lvl 5) compartment",
-"Житель ур. 8+":"A resident at lvl 8+",
-"✦ Элитный отсек — максимальный уровень":"✦ Elite compartment — max level",
-"» объединён с соседним того же уровня — теперь ×":"» merged with the neighbour of the same level — now ×",
-"🔬 Даёт очки исследований · нужен экипаж":"🔬 Generates research points · needs crew",
-"Производит":"Produces",
-"нужен экипаж":"needs crew",
-"👥 Повышает лимит населения":"👥 Raises the population cap",
-"📦 Повышает запас ресурсов":"📦 Raises resource storage",
-"⛑ Лечит раненых членов экипажа":"⛑ Heals wounded crew",
-"🏋 Тренирует характеристики экипажа":"🏋 Trains crew stats",
-"🚪 Открывает экспедиции в бездну":"🚪 Unlocks expeditions into the abyss",
-"🛡 Усиливает оборону станции в бою":"🛡 Boosts station defense in combat",
-"Отсек уже элитный — максимальный уровень":"This compartment is already elite — max level",
-"Скрыть обучение насовсем? Подсказки-задачи больше не появятся.":"Hide the tutorial for good? Objective hints will no longer appear.",
-"Отмена":"Cancel",
-"Да":"Yes",
-"🔇 Звук выключен":"🔇 Sound off",
-"🔊 Звук включён":"🔊 Sound on",
-"🆘 Спасательная капсула прибыла":"🆘 Rescue capsule arrived",
-"Весь экипаж погиб. Через 30 секунд прибудет спасательная капсула с новым членом экипажа.":"The entire crew is dead. A rescue capsule with a new crew member will arrive in 30 seconds.",
-"🆘 Капсула спасения":"🆘 Rescue capsule",
-"⚡ Ускорение производства ×2 на 4 часа.":"⚡ Production boosted ×2 for 4 hours.",
-"⚡ ×2 к производству на 4 часа":"⚡ ×2 production for 4 hours",
-"Раненых нет":"Nobody is wounded",
-"⛑ Медицинский дрон вылечил весь экипаж.":"⛑ A medical drone healed the whole crew.",
-"⛑ Экипаж вылечен":"⛑ Crew healed",
-"Нет активных экспедиций":"No active expeditions",
-"🚪 Разведчики возвращаются":"🚪 Scouts are on their way back",
-"📺 Бонусы за рекламу":"📺 Ad bonuses",
-"⚡ ×2 активно":"⚡ ×2 active",
-"мин":"min",
-"⚡ ×2 производство (4 ч)":"⚡ ×2 production (4 h)",
-"⛑ Вылечить экипаж":"⛑ Heal the crew",
-"🚪 Вернуть разведчиков":"🚪 Recall scouts",
-"Язык / Language":"Язык / Language",
-"Артём": "Artem",
-"Ая": "Aya",
-"Вера": "Vera",
-"Веспер": "Vesper",
-"Волкова": "Volkova",
-"Гейл": "Gale",
-"Глеб": "Gleb",
-"Гор": "Gor",
-"Дина": "Dina",
-"Драго": "Drago",
-"Дэн": "Dan",
-"Зоя": "Zoya",
-"Игнат": "Ignat",
-"Ирис": "Iris",
-"Кай": "Kai",
-"Кио": "Kio",
-"Крейн": "Crane",
-"Крон": "Kron",
-"Ласт": "Last",
-"Лев": "Lev",
-"Лея": "Leya",
-"Марк": "Mark",
-"Мила": "Mila",
-"Мор": "Mor",
-"Ника": "Nika",
-"Нора": "Nora",
-"Норд": "Nord",
-"Осип": "Osip",
-"Оул": "Owl",
-"Раск": "Rusk",
-"Рита": "Rita",
-"Рома": "Roma",
-"Сато": "Sato",
-"Соня": "Sonya",
-"Стрэйт": "Strait",
-"Тая": "Taya",
-"Тимур": "Timur",
-"Феликс": "Felix",
-"Финн": "Finn",
-"Эйк": "Ake",
-"Эля": "Elya",
-"Юна": "Yuna",
-"Новобранец": "Recruit",
-"Кислород": "Oxygen",
-"Энергия": "Power",
-"Провизия": "Food",
-"Вода": "Water",
-"Металл": "Scrap",
-"Кредиты": "Credits",
-"Сила": "Strength",
-"Стойкость": "Endurance",
-"Интеллект": "Intellect",
-"Ловкость": "Agility",
-"Харизма": "Charisma",
-"Инженер": "Engineer",
-"Биолог": "Biologist",
-"Боец": "Fighter",
-"Разведчик": "Scout",
-"Механик": "Mechanic",
-"Медик": "Medic",
-"Торговец": "Trader",
-"+60% в реакторе, опреснителе и лаборатории.": "+60% in the reactor, desalinator and lab.",
-"+60% на кислородной станции и ферме.": "+60% at the oxygen plant and hydroponics farm.",
-"+70% к урону в бою, +50% в арсенале.": "+70% combat damage, +50% in the armory.",
-"+60% к добыче и вдвое меньше риск в экспедициях.": "+60% expedition loot and half the risk.",
-"+70% в мастерской, дешевле крафт и выше шанс редкости.": "+70% in the workshop: cheaper crafting, better rarity odds.",
-"+60% в лазарете, лечит намного быстрее.": "+60% in the medbay, heals far faster.",
-"+70% в торговом шлюзе, ускоряет прирост населения.": "+70% at the trade lock, speeds up population growth.",
-"Без специализации. Переобучите за кредиты.": "No specialization. Retrain for credits.",
-"Центр управления": "Control Center",
-"Сердце станции. Даёт немного всего.": "The heart of the station. Produces a little of everything.",
-"Термоядерный реактор": "Fusion Reactor",
-"Вырабатывает энергию для всех систем.": "Generates power for every system.",
-"Кислородная станция": "Oxygen Plant",
-"Электролиз воды в кислород. Дышите.": "Splits water into oxygen. Breathe easy.",
-"Гидропонная ферма": "Hydroponics Farm",
-"Выращивает провизию под лампами.": "Grows food under lamps.",
-"Опреснитель": "Desalinator",
-"Забортная вода → питьевая.": "Seawater into drinking water.",
-"Мастерская": "Workshop",
-"Переплавка обломков в металл. Здесь крафтят снаряжение.": "Melts wreckage into scrap. Gear is crafted here.",
-"Торговый шлюз": "Trade Lock",
-"Торговля с проходящими субмаринами.": "Trade with passing submarines.",
-"Лаборатория": "Laboratory",
-"Генерирует очки исследований.": "Generates research points.",
-"Жилой отсек": "Quarters",
-"+2 к лимиту населения. Харизма ускоряет прирост.": "+2 population cap. Charisma speeds up growth.",
-"Лазарет": "Medbay",
-"Лечит раненых членов экипажа.": "Heals wounded crew members.",
-"Склад": "Storage",
-"+250 к запасу всех ресурсов.": "+250 storage for every resource.",
-"Тренировочный зал": "Training Hall",
-"Экипаж качает характеристики.": "Crew trains their stats here.",
-"Ангар-шлюз": "Hangar Lock",
-"Открывает экспедиции в бездну. +1 слот за уровень.": "Unlocks expeditions into the abyss. +1 slot per level.",
-"Арсенал": "Armory",
-"Усиливает оборону. Экипаж здесь даёт урон в бою.": "Boosts defense. Crew stationed here deals combat damage.",
-"базовый": "basic",
-"улучшенный": "improved",
-"продвинутый": "advanced",
-"элитный": "elite",
-"Ядро станции": "Station core",
-"тренировки": "training",
-"лечение": "healing",
-"Обычное": "Common",
-"Необычное": "Uncommon",
-"Редкое": "Rare",
-"Легендарное": "Legendary",
-"Абиссальное": "Abyssal",
-"Гарпунный нож": "Harpoon Knife",
-"Электрогарпун": "Electro-Harpoon",
-"Гидропушка": "Hydro Cannon",
-"Рельсотрон": "Railgun",
-"Абиссальное оружие": "Abyssal Weapon",
-"Гидрокостюм": "Wetsuit",
-"Композитная броня": "Composite Armor",
-"Скафандр «Тритон»": "Triton Deepsuit",
-"Бронекостюм «Атлас»": "Atlas Battlesuit",
-"Замкнутый цикл": "Closed Loop",
-"+20% к кислороду, воде и провизии.": "+20% oxygen, water and food.",
-"Сверхпроводники": "Superconductors",
-"+25% к выработке энергии.": "+25% power output.",
-"Модульная сборка": "Modular Assembly",
-"−20% к стоимости постройки и улучшений.": "−20% build and upgrade costs.",
-"Композитная броня ": "Composite Plating ",
-"+30% к прочности отсеков в бою.": "+30% compartment durability in combat.",
-"Тактика роя": "Swarm Tactics",
-"+30% к урону экипажа в бою.": "+30% crew combat damage.",
-"Глубинные маяки": "Deep Beacons",
-"+40% к добыче из экспедиций, риск ↓.": "+40% expedition loot, lower risk.",
-"Автоматизация": "Automation",
-"+15% ко всему производству.": "+15% to all production.",
-"Нейросеть станции": "Station Neural Net",
-"+25% ко всему производству.": "+25% to all production.",
-"Программа колонии": "Colony Program",
-"Прирост населения вдвое быстрее.": "Population grows twice as fast.",
-"Ещё +40% к урону экипажа.": "Another +40% crew damage.",
-"Абиссальный краб": "Abyssal Crab",
-"Плеть-угорь": "Whip Eel",
-"Стая удильщиков": "Anglerfish Swarm",
-"Гигантский кальмар": "Giant Squid",
-"Левиафан-детёныш": "Leviathan Juvenile",
-"Нечто из впадины": "Thing from the Trench",
-"Станция": "Station",
-"Стройка": "Build",
-"Экипаж": "Crew",
-"Наука": "Science",
-"Бездна": "Abyss",
-"Журнал": "Log",
-"Снаряжение": "Gear",
-"План станции": "Station Plan",
-"Строительство отсеков": "Build Compartments",
-"Журнал станции": "Station Log",
-"Экспедиции в бездну": "Abyss Expeditions",
-"Исследования · 🔬": "Research · 🔬",
-"НЕРЕЙ ·": "NEREUS ·",
-"ГЛУБИНА 6800М": "DEPTH 6800M",
-"Уровень": "Level",
-"Ступень:": "Tier:",
-"Добро пожаловать на «Нерей»": "Welcome to Nereus",
-"Вы на дне океана. Экипаж постоянно тратит <b>кислород, провизию и воду</b> — следите за верхней панелью: красный минус у ресурса значит, что запас тает. Нажимайте на отсеки, чтобы назначать в них жителей и улучшать их. Жёлтая подсветка 👆 показывает, куда нажать для текущей задачи.": "You are on the ocean floor. Your crew constantly burns <b>oxygen, food and water</b> — watch the top bar: a red minus means a resource is draining. Tap compartments to assign residents and upgrade them. The yellow highlight 👆 shows where to tap for the current objective.",
-"У экипажа есть профессии": "Your crew has professions",
-"Каждый житель имеет <b>специализацию</b> (инженер, биолог, боец, разведчик, механик, медик, торговец) — она даёт крупный бонус в профильном деле. Ставьте людей на подходящие отсеки: ★ отмечает удачное совпадение. Специализацию можно сменить в карточке жителя за кредиты (кнопка 🎓).": "Every resident has a <b>specialization</b> (engineer, biologist, fighter, scout, mechanic, medic, trader) that grants a large bonus in matching work. Assign people to fitting compartments: ★ marks a good match. You can retrain a specialization from the resident card for credits (the 🎓 button).",
-"Отсеки можно объединять": "Compartments can be merged",
-"Если построить отсек <b>того же типа и уровня</b> вплотную к существующему, они <b>автоматически сольются</b> в один широкий (до ×3): больше экипажа, выше эффективность, меньше расход энергии. Новый отсек всегда 1-го уровня — пристраивайте его к отсеку 1-го уровня. Клетку для стройки можно выбрать, нажав «＋» на плане.": "Build a compartment of the <b>same type and level</b> right next to an existing one and they <b>merge automatically</b> into a wide one (up to ×3): more crew, higher efficiency, less power drain. A new compartment is always level 1 — attach it to a level-1 compartment. Pick the build cell by tapping ＋ on the plan.",
-"Открыты новые отсеки": "New compartments unlocked",
-"Мастерская запущена! В <b>Стройке</b> появились новые типы отсеков: лаборатория, ангар, лазарет, тренировочный зал, торговый шлюз. А в самой мастерской можно <b>крафтить снаряжение</b> — загляните в неё.": "The workshop is online! New compartment types appeared in <b>Build</b>: laboratory, hangar, medbay, training hall, trade lock. And inside the workshop itself you can <b>craft gear</b> — take a look.",
-"Сонар засёк движение": "Sonar picked up movement",
-"Из тьмы к станции что-то приближается. Скоро начнутся <b>атаки тварей бездны</b>. Постройте <b>Арсенал</b> и скрафтите <b>оружие</b> в Мастерской, затем наденьте его на экипаж — вооружённые люди дают отпор автоматически.": "Something is closing in out of the dark. <b>Abyss creature attacks</b> will begin soon. Build an <b>Armory</b> and craft <b>weapons</b> in the Workshop, then equip your crew — armed people fight back automatically.",
-"Открыта Наука": "Science unlocked",
-"Лаборатория генерирует <b>очки исследований</b>. Появилась вкладка <b>Наука</b> — тратьте очки на постоянные улучшения: больше производства, крепче броня, сильнее урон, дешевле стройка.": "The laboratory generates <b>research points</b>. The <b>Science</b> tab is now available — spend points on permanent upgrades: more production, tougher armor, stronger damage, cheaper construction.",
-"Открыта Бездна": "The Abyss unlocked",
-"Ангар готов. Во вкладке <b>Бездна</b> отправляйте разведчиков во тьму — они приносят металл, кредиты и науку. Чем глубже, тем больше добыча, но выше риск вернуться раненым.": "The hangar is ready. From the <b>Abyss</b> tab send scouts into the dark — they bring back scrap, credits and research. The deeper they go, the bigger the haul and the higher the risk of coming back wounded.",
-"Снаряжение бывает редким": "Gear comes in rarities",
-"У оружия и костюмов есть <b>уровни редкости</b>: обычное, необычное, редкое, легендарное и абиссальное — каждый следующий заметно сильнее. Редкость выпадает случайно при крафте; <b>механик</b> в мастерской повышает шанс. Редкие вещи также находятся в экспедициях.": "Weapons and suits have <b>rarity tiers</b>: common, uncommon, rare, legendary and abyssal — each noticeably stronger than the last. Rarity rolls randomly when crafting; a <b>mechanic</b> in the workshop improves the odds. Rare items are also found on expeditions.",
-"Понятно ✓": "Got it ✓",
-"Построить": "Build",
-"Изучить": "Research",
-"Собрать": "Craft",
-"Отправить": "Launch",
-"Убрать": "Remove",
-"Сбросить": "Reset",
-"Распределить": "Assign",
-"Назначить:": "Assign to:",
-"Снять с работы": "Unassign",
-"Снести отсек": "Demolish",
-"← Назад": "← Back",
-"▲ Улучшить": "▲ Upgrade",
-"Улучшить до ур.": "Upgrade to lv.",
-"Заблокировано": "Locked",
-"✓ изучено": "✓ researched",
-"Требует:": "Requires:",
-"Очки исследований:": "Research points:",
-"Производство:": "Output:",
-"Постройте": "Build",
-"⚠ Постройте": "⚠ Build",
-"🔒 Постройте": "🔒 Build",
-"Мастерскую": "a Workshop",
-"🔬 Лабораторию": "a Laboratory",
-"🚪 Ангар-шлюз": "a Hangar Lock",
-"К стройке": "To Build",
-"👥 К экипажу": "👥 To Crew",
-"🏗 Построить новый отсек": "🏗 Build a new compartment",
-"⚙ Пробурить этаж": "⚙ Drill deck",
-"🔧 Крафт снаряжения": "🔧 Craft gear",
-"🔧 Собрано:": "🔧 Crafted:",
-"Надеть со склада:": "Equip from storage:",
-"💾 Сохранить": "💾 Save",
-"🗑 Заново": "🗑 Restart",
-"⬇ Экспорт": "⬇ Export",
-"⬆ Импорт": "⬆ Import",
-"🎓 Переобучение": "🎓 Retraining",
-"💥 Аварийный залп (−15⚡)": "💥 Emergency salvo (−15⚡)",
-"🚪 В экспедицию": "🚪 Send out",
-"Отправить разведчика:": "Send a scout:",
-"🕑 Свободен": "🕑 Idle",
-"🚪 В бездне": "🚪 In the abyss",
-"⛑ Ранен": "⛑ Wounded",
-"⛑ Ранен — лечится в лазарете (или медленно сам).": "⛑ Wounded — healing in the medbay (or slowly on their own).",
-"⚠ Отсек повреждён — идёт ремонт.": "⚠ Compartment damaged — repairs under way.",
-"🕑 Без дела:": "🕑 Idle:",
-"🕑 Свободны — нажмите, чтобы назначить на работу": "🕑 Idle — tap a resident to put them to work",
-"Никого. Все отдыхают.": "Nobody. Everyone is resting.",
-"Пока тихо...": "All quiet for now...",
-"Нет свободного экипажа.": "No crew available.",
-"Свободного экипажа нет.": "No crew available.",
-"Занятые": "Working",
-"Слоты ангара: занято": "Hangar slots: in use",
-"слоты:": "slots:",
-"Урон вашего экипажа:": "Your crew damage:",
-"📡 Сонар — угроза из бездны": "📡 Sonar — threat from the abyss",
-"📍 Место выбрано: этаж": "📍 Spot selected: deck",
-", клетка": ", cell",
-"Свободных клеток нет. Пробурите новый этаж на плане станции —": "No free cells. Drill a new deck on the station plan —",
-"Не хватает ресурсов на новый этаж.": "Not enough resources for a new deck.",
-"Отсек встанет в первую свободную клетку. Чтобы выбрать место самому — нажмите ＋ на плане станции.": "The compartment goes into the first free cell. To pick the spot yourself, tap ＋ on the station plan.",
-"Нажмите на пустую клетку, чтобы построить именно там. Однотипные отсеки одного уровня рядом сливаются в широкий (до ×3).": "Tap an empty cell to build exactly there. Matching compartments of the same level placed side by side merge into a wide one (up to ×3).",
-"Новые отсеки открываются по мере развития станции.": "New compartments unlock as the station grows.",
-"Разведчики приносят металл, кредиты и очки исследований. Чем глубже — тем больше добычи и риска.": "Scouts bring back scrap, credits and research points. Deeper means more loot and more risk.",
-"Снаряжение крафтится в 🔩 Мастерской или находится в экспедициях, затем надевается здесь.": "Gear is crafted in the 🔩 Workshop or found on expeditions, then equipped here.",
-"Прогресс автосохраняется и продолжает идти, пока вас нет.": "Progress saves automatically and keeps running while you are away.",
-"<span class=\"mut\">— нет —</span>": "<span class=\"mut\">— none —</span>",
-"Станция «Нерей» запущена. Свет, вода, воздух — под вашим контролем.": "Station Nereus is online. Light, water and air are yours to manage.",
-"🏗 Построен отсек: <b>": "🏗 Compartment built: <b>",
-"пристроен к однотипному и объединён — теперь ×": "was attached to a matching one and merged — now ×",
-"Отсек «": "Compartment «",
-"» улучшен до ур.": "» upgraded to lv.",
-"» демонтирован (+": "» demolished (+",
-"» вышел на новую ступень —": "» reached a new tier —",
-"» — производство падает.": "» — output is dropping.",
-"⚠ Пробоина в отсеке «": "⚠ Hull breach in compartment «",
-"⚠ Утечка в «": "⚠ Leak in «",
-"⚠ Дефицит: ": "⚠ Shortage: ",
-"⚡ Перегрузка сети": "⚡ Grid overload",
-"⚡ Скачок напряжения: потеряно ": "⚡ Power surge: lost ",
-" энергии.": " power.",
-"💠 Находка: +": "💠 Salvage: +",
-"💠 Обломки затонувшего судна: +": "💠 Wreck of a sunken vessel: +",
-" кредитов": " credits",
-" кредитов.": " credits.",
-"🔬 Изучено: <b>": "🔬 Researched: <b>",
-"🔬 Открытие: ": "🔬 Discovery: ",
-"🚨 АТАКА: <b>": "🚨 ATTACK: <b>",
-"</b> таранит станцию!": "</b> is ramming the station!",
-" атакует станцию!": " attacks the station!",
-"</b> отбит! Трофеи: +": "</b> repelled! Spoils: +",
-"✅ Тварь уничтожена! +": "✅ Creature destroyed! +",
-"💥 Аварийный залп!": "💥 Emergency salvo!",
-"Недостаточно энергии для залпа": "Not enough power for a salvo",
-"📡 Сонар засёк движение в темноте... угроза растёт.": "📡 Sonar caught movement in the dark... the threat is rising.",
-"</b> тяжело ранен ": "</b> was badly wounded by ",
-"</b> без сознания — доставлен в лазарет.": "</b> is unconscious — carried to the medbay.",
-"</b> вылечен и снова в строю.": "</b> is healed and back on duty.",
-"</b> достиг уровня ": "</b> reached level ",
-"» вышел": "» advanced",
-"</b> ушёл в экспедицию во тьму.": "</b> set out on an expedition into the dark.",
-"</b> вернулся: +": "</b> returned: +",
-" — но вернулся тяжело раненым!": " — but came back badly wounded!",
-" (получил травмы)": " (injured)",
-"Возврат через": "Back in",
-"🚪 Новый член экипажа: ": "🚪 New crew member: ",
-"К станции пришвартовался новичок: <b>": "A newcomer docked at the station: <b>",
-" надел ": " equipped ",
-". Наденьте на экипаж.": ". Equip it on your crew.",
-"— новая специализация:": "— new specialization:",
-". Смена специализации:": ". Retraining cost:",
-"⧉ Объединённый блок из": "⧉ Merged block of",
-"отсеков (": "compartments (",
-"клетки в ряду). Улучшается целиком, вмещает больше экипажа и экономит энергию.": "cells in a row). It upgrades as one, holds more crew and saves power.",
-"⚙ Пробурен новый этаж — уровень": "⚙ New deck drilled — level",
-". Свободно": ". Free cells:",
-"отсека.": "compartments.",
-"⚙ Этаж": "⚙ Deck",
-"готов": "ready",
-"Не хватает кредитов": "Not enough credits",
-"Не хватает ресурсов на новый этаж": "Not enough resources for a new deck",
-"Нет места для отсека": "No room for the compartment",
-"Нет свободных клеток — пробурите новый этаж": "No free cells — drill a new deck",
-"Нет свободных слотов ангара": "No free hangar slots",
-"Раненый не может идти": "A wounded crew member cannot go",
-"Ядро станции нельзя снести": "The station core cannot be demolished",
-"💾 Сохранено": "💾 Saved",
-"Сохранение не найдено": "No save found",
-"Файл повреждён": "Corrupted file",
-"Сохранение недоступно в этом окне": "Saving is unavailable in this window",
-"⬆ Сохранение загружено": "⬆ Save loaded",
-"⬇ Файл сохранения выгружен": "⬇ Save file exported",
-"Найдено сохранение — можно продолжить.": "A save was found — you can continue.",
-"Начать заново? Текущий прогресс будет удалён.": "Start over? Your current progress will be deleted.",
-"🌊 Пока вас не было (": "🌊 While you were away (",
-"мин):": "min):",
-"без изменений": "no changes",
-"· ур.": "· lv.",
-"ур.": "lv.",
-"· Опыт": "· XP",
-"чел.": "people",
-"запас": "cap",
-"глубина": "depth",
-"Костюм: броня +": "Suit: armor +",
-"Оружие: урон +": "Weapon: damage +",
-"броня +": "armor +",
-"урон +": "damage +",
-"/с": "/s",
-"🔬/с": "🔬/s",
-"с": "s",
-"к": "k",
-", а также": ", and also",
-", чтобы генерировать очки исследований быстрее.": " to generate research points faster.",
-", чтобы открыть новые типы отсеков.": " to unlock new compartment types.",
-", чтобы отправлять разведчиков во тьму за ресурсами.": " to send scouts into the dark for resources.",
-"Экипаж ·": "Crew ·",
-"ГЛУБОКОВОДНАЯ СТАНЦИЯ": "DEEP-SEA STATION",
-"БЕЗДНА": "THE ABYSS",
-"— НЕРЕЙ · ГЛУБИНА 6 800 М —": "— NEREUS · DEPTH 6,800 M —",
-"Поверхность потеряна. Вы — начальник станции на дне океана. Стройте отсеки, распределяйте экипаж, добывайте кислород и энергию, отражайте атаки глубоководных тварей и отправляйте разведчиков во тьму за ресурсами. Держите людей живыми.": "The surface is lost. You command a station on the ocean floor. Build compartments, assign your crew, produce oxygen and power, fend off deep-sea creatures and send scouts into the dark for resources. Keep your people alive.",
-"ПОГРУЖЕНИЕ ▸": "DIVE ▸",
-"Продолжить сохранение": "Continue saved game",
-"БЕЗДНА — Станция Нерей": "THE ABYSS — Station Nereus",
-"Смотреть рекламу": "Watch an ad",
-"×2 к производству на 4 часа": "×2 production for 4 hours",
-"Удвоить награду": "Double the reward",
-"Реклама недоступна": "Ad unavailable",
-"Ускорение активно": "Boost active",
-"осталось": "left",
-"Язык": "Language"
-};
-const LANG = (function(){
-  try{
-    const forced=localStorage.getItem("abyss_lang");
-    if(forced==="ru"||forced==="en") return forced;
-    const q=new URLSearchParams(location.search);
-    const l=(q.get("lang")||document.documentElement.lang||navigator.language||"ru").toLowerCase();
-    return l.indexOf("ru")===0 ? "ru" : "en";
-  }catch(e){ return "ru"; }
-})();
-function T(s){ if(LANG==="ru") return s; const v=I18N[s]; return v===undefined ? s : v; }
-function setLang(l){ try{ localStorage.setItem("abyss_lang",l); }catch(e){} location.reload(); }
-function applyStaticI18n(){
-  document.documentElement.lang = LANG;
-  const set=(id,txt)=>{ const el=document.getElementById(id); if(el) el.textContent=txt; };
-  document.title = T("\u0411\u0415\u0417\u0414\u041d\u0410 \u2014 \u0421\u0442\u0430\u043d\u0446\u0438\u044f \u041d\u0435\u0440\u0435\u0439");
-  set("i18nSub1", T("\u0413\u041b\u0423\u0411\u041e\u041a\u041e\u0412\u041e\u0414\u041d\u0410\u042f \u0421\u0422\u0410\u041d\u0426\u0418\u042f"));
-  set("i18nTitle", T("\u0411\u0415\u0417\u0414\u041d\u0410"));
-  set("i18nSub2", T("\u2014 \u041d\u0415\u0420\u0415\u0419 \u00b7 \u0413\u041b\u0423\u0411\u0418\u041d\u0410 6 800 \u041c \u2014"));
-  set("i18nIntro", T("\u041f\u043e\u0432\u0435\u0440\u0445\u043d\u043e\u0441\u0442\u044c \u043f\u043e\u0442\u0435\u0440\u044f\u043d\u0430. \u0412\u044b \u2014 \u043d\u0430\u0447\u0430\u043b\u044c\u043d\u0438\u043a \u0441\u0442\u0430\u043d\u0446\u0438\u0438 \u043d\u0430 \u0434\u043d\u0435 \u043e\u043a\u0435\u0430\u043d\u0430. \u0421\u0442\u0440\u043e\u0439\u0442\u0435 \u043e\u0442\u0441\u0435\u043a\u0438, \u0440\u0430\u0441\u043f\u0440\u0435\u0434\u0435\u043b\u044f\u0439\u0442\u0435 \u044d\u043a\u0438\u043f\u0430\u0436, \u0434\u043e\u0431\u044b\u0432\u0430\u0439\u0442\u0435 \u043a\u0438\u0441\u043b\u043e\u0440\u043e\u0434 \u0438 \u044d\u043d\u0435\u0440\u0433\u0438\u044e, \u043e\u0442\u0440\u0430\u0436\u0430\u0439\u0442\u0435 \u0430\u0442\u0430\u043a\u0438 \u0433\u043b\u0443\u0431\u043e\u043a\u043e\u0432\u043e\u0434\u043d\u044b\u0445 \u0442\u0432\u0430\u0440\u0435\u0439 \u0438 \u043e\u0442\u043f\u0440\u0430\u0432\u043b\u044f\u0439\u0442\u0435 \u0440\u0430\u0437\u0432\u0435\u0434\u0447\u0438\u043a\u043e\u0432 \u0432\u043e \u0442\u044c\u043c\u0443 \u0437\u0430 \u0440\u0435\u0441\u0443\u0440\u0441\u0430\u043c\u0438. \u0414\u0435\u0440\u0436\u0438\u0442\u0435 \u043b\u044e\u0434\u0435\u0439 \u0436\u0438\u0432\u044b\u043c\u0438."));
-  const sb=document.getElementById("startBtn"); if(sb) sb.textContent=T("\u041f\u041e\u0413\u0420\u0423\u0416\u0415\u041d\u0418\u0415 \u25b8");
-  const lb=document.getElementById("loadBtn"); if(lb) lb.textContent=T("\u041f\u0440\u043e\u0434\u043e\u043b\u0436\u0438\u0442\u044c \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u0438\u0435");
-}
+/* ================= ТЕКСТЫ =================
+   Игра выпускается только на русском языке (п. 8.2.3 требований платформы):
+   английская локализация и переключатель языка убраны. T() оставлена как
+   тождественная обёртка, чтобы не переписывать все точки вывода текста. */
+function T(s){ return s; }
 
 /* ============================ ДАННЫЕ ============================ */
 const RES = {
@@ -939,27 +523,27 @@ const ROOMS = {
   oxygen:{n:T("Кислородная станция"),ic:"🫧",stat:"end",produces:"oxygen",base:3.5,power:3,desc:T("Электролиз воды в кислород. Дышите."),baseCost:{metal:35}},
   farm:{n:T("Гидропонная ферма"),ic:"🥬",stat:"end",produces:"food",base:3.5,power:2,desc:T("Выращивает провизию под лампами."),baseCost:{metal:35}},
   desal:{n:T("Опреснитель"),ic:"💧",stat:"int",produces:"water",base:3.5,power:2,desc:T("Забортная вода → питьевая."),baseCost:{metal:35}},
-  workshop:{n:T("Мастерская"),ic:"🔩",stat:"str",produces:"metal",base:1.5,power:4,desc:T("Переплавка обломков в металл. Здесь крафтят снаряжение."),baseCost:{metal:40,credits:20}},
+  workshop:{n:T("Мастерская"),ic:"🔩",stat:"str",produces:"metal",base:1.5,power:4,desc:T("Переплавка обломков в металл. Здесь собирают снаряжение."),baseCost:{metal:40,credits:20}},
   market:{n:T("Торговый шлюз"),ic:"💠",stat:"cha",produces:"credits",base:1.5,power:4,desc:T("Торговля с проходящими субмаринами."),baseCost:{metal:40}},
   lab:{n:T("Лаборатория"),ic:"🔬",stat:"int",produces:"research",base:0.5,power:3,desc:T("Генерирует очки исследований."),baseCost:{metal:55,credits:40}},
   quarters:{n:T("Жилой отсек"),ic:"🛏",stat:"cha",produces:null,power:2,desc:T("+2 к лимиту населения. Харизма ускоряет прирост."),baseCost:{metal:30},popCap:2},
   medbay:{n:T("Лазарет"),ic:"⛑",stat:"int",produces:null,power:4,desc:T("Лечит раненых членов экипажа."),baseCost:{metal:45,credits:20}},
   storage:{n:T("Склад"),ic:"📦",stat:null,produces:null,power:0,desc:T("+250 к запасу всех ресурсов."),baseCost:{metal:35}},
-  gym:{n:T("Тренировочный зал"),ic:"🏋",stat:null,produces:null,power:4,desc:T("Экипаж качает характеристики."),baseCost:{metal:45}},
-  hangar:{n:T("Ангар-шлюз"),ic:"🚪",stat:null,produces:null,power:4,desc:T("Открывает экспедиции в бездну. +1 слот за уровень."),baseCost:{metal:60,credits:40}},
+  gym:{n:T("Тренировочный зал"),ic:"🏋",stat:null,produces:null,power:4,desc:T("Экипаж тренирует характеристики."),baseCost:{metal:45}},
+  hangar:{n:T("Ангар-шлюз"),ic:"🚪",stat:null,produces:null,power:4,desc:T("Открывает экспедиции в бездну: +1 слот за уровень."),baseCost:{metal:60,credits:40}},
   armory:{n:T("Арсенал"),ic:"🛡",stat:"str",produces:null,power:4,desc:T("Усиливает оборону. Экипаж здесь даёт урон в бою."),baseCost:{metal:55,credits:30}},
 };
 const BUILD_ORDER = ["reactor","oxygen","farm","desal","workshop","market","lab","quarters","medbay","storage","gym","hangar","armory"];
 
 // Крафт
 const CRAFT = {
-  knife:{n:T("Гарпунный нож"),ic:"🔪",type:"weapon",dmg:4,cost:{metal:20},res:0},
-  spear:{n:T("Электрогарпун"),ic:"🔱",type:"weapon",dmg:9,cost:{metal:45,credits:20},res:2},
-  rifle:{n:T("Гидропушка"),ic:"🔫",type:"weapon",dmg:18,cost:{metal:90,credits:60},res:6},
-  railgun:{n:T("Рельсотрон"),ic:"💥",type:"weapon",dmg:34,cost:{metal:180,credits:140},res:14},
-  vest:{n:T("Гидрокостюм"),ic:"🩱",type:"suit",hp:15,cost:{metal:25},res:0},
-  diver:{n:T("Скафандр «Тритон»"),ic:"🤿",type:"suit",hp:35,cost:{metal:70,credits:40},res:4},
-  atlas:{n:T("Бронекостюм «Атлас»"),ic:"🦾",type:"suit",hp:70,cost:{metal:150,credits:110},res:12},
+  knife:{n:"Гарпунный нож",ic:"🔪",g:"m",type:"weapon",dmg:4,cost:{metal:20},res:0},
+  spear:{n:"Электрогарпун",ic:"🔱",g:"m",type:"weapon",dmg:9,cost:{metal:45,credits:20},res:2},
+  rifle:{n:"Гидропушка",ic:"🔫",g:"f",type:"weapon",dmg:18,cost:{metal:90,credits:60},res:6},
+  railgun:{n:"Рельсотрон",ic:"💥",g:"m",type:"weapon",dmg:34,cost:{metal:180,credits:140},res:14},
+  vest:{n:"Гидрокостюм",ic:"🩱",g:"m",type:"suit",hp:15,cost:{metal:25},res:0},
+  diver:{n:"Скафандр «Тритон»",ic:"🤿",g:"m",type:"suit",hp:35,cost:{metal:70,credits:40},res:4},
+  atlas:{n:"Бронекостюм «Атлас»",ic:"🦾",g:"m",type:"suit",hp:70,cost:{metal:150,credits:110},res:12},
 };
 
 // Специализации экипажа
@@ -968,8 +552,8 @@ const SPECS = {
   engineer: {n:T("Инженер"),    ic:"🔧", rooms:["reactor","desal","lab"], bonus:0.4, desc:T("+60% в реакторе, опреснителе и лаборатории.")},
   biologist:{n:T("Биолог"),     ic:"🧬", rooms:["oxygen","farm"], bonus:0.4, desc:T("+60% на кислородной станции и ферме.")},
   soldier:  {n:T("Боец"),       ic:"⚔",  rooms:["armory"], bonus:0.5, combat:0.5, desc:T("+70% к урону в бою, +50% в арсенале.")},
-  scout:    {n:T("Разведчик"),  ic:"🧭", rooms:[], expedition:0.4, expRisk:0.5, desc:T("+60% к добыче и вдвое меньше риск в экспедициях.")},
-  mechanic: {n:T("Механик"),    ic:"⚙",  rooms:["workshop"], bonus:0.5, craft:true, desc:T("+70% в мастерской, дешевле крафт и выше шанс редкости.")},
+  scout:    {n:T("Разведчик"),  ic:"🧭", rooms:[], expedition:0.4, expRisk:0.5, desc:T("+60% к добыче и вдвое меньший риск в экспедициях.")},
+  mechanic: {n:T("Механик"),    ic:"⚙",  rooms:["workshop"], bonus:0.5, craft:true, desc:T("+70% в мастерской: сборка дешевле, шанс редкости выше.")},
   medic:    {n:T("Медик"),      ic:"⛑",  rooms:["medbay"], bonus:0.4, heal:0.6, desc:T("+60% в лазарете, лечит намного быстрее.")},
   trader:   {n:T("Торговец"),   ic:"💠", rooms:["market"], bonus:0.5, pop:0.6, desc:T("+70% в торговом шлюзе, ускоряет прирост населения.")},
 };
@@ -977,13 +561,23 @@ const SPEC_KEYS=["engineer","biologist","soldier","scout","mechanic","medic","tr
 
 // Редкость снаряжения
 const RARITY = {
-  common:  {n:T("Обычное"),     mult:1.0, c:"#b9c6cc", w:58},
-  uncommon:{n:T("Необычное"),   mult:1.3, c:"#6fe06a", w:26},
-  rare:    {n:T("Редкое"),      mult:1.7, c:"#5fb8ff", w:11},
-  epic:    {n:T("Легендарное"), mult:2.3, c:"#c98bff", w:4},
-  abyssal: {n:T("Абиссальное"), mult:3.2, c:"#ffce54", w:1},
+  common:  {n:"Обычный",     nf:"Обычная",     mult:1.0, c:"#b9c6cc", w:58},
+  uncommon:{n:"Необычный",   nf:"Необычная",   mult:1.3, c:"#6fe06a", w:26},
+  rare:    {n:"Редкий",      nf:"Редкая",      mult:1.7, c:"#5fb8ff", w:11},
+  epic:    {n:"Легендарный", nf:"Легендарная", mult:2.3, c:"#c98bff", w:4},
+  abyssal: {n:"Абиссальный", nf:"Абиссальная", mult:3.2, c:"#ffce54", w:1},
 };
 const RAR_KEYS=Object.keys(RARITY);
+// Название редкости в роде предмета: «Редкая гидропушка», «Редкий гарпунный нож».
+function rarName(rarKey,craftKey){
+  const r=RARITY[rarKey]; if(!r) return "";
+  return (CRAFT[craftKey] && CRAFT[craftKey].g==="f") ? r.nf : r.n;
+}
+// Полное имя предмета с редкостью: со строчной буквы, потому что идёт после прилагательного.
+function itemFullName(rarKey,craftKey){
+  const it=CRAFT[craftKey]; if(!it) return "";
+  return rarName(rarKey,craftKey)+" "+it.n.charAt(0).toLowerCase()+it.n.slice(1);
+}
 
 // Исследования
 const RESEARCH = {
@@ -991,7 +585,7 @@ const RESEARCH = {
   life1:{n:T("Замкнутый цикл"),ic:"♻",desc:T("+20% к кислороду, воде и провизии."),cost:12,req:[],eff:{lifeMult:0.2}},
   power1:{n:T("Сверхпроводники"),ic:"⚡",desc:T("+25% к выработке энергии."),cost:30,req:[],eff:{powerMult:0.25}},
   armor1:{n:T("Композитная броня"),ic:"🛡",desc:T("+30% к прочности отсеков в бою."),cost:36,req:[],gate:{ok:()=>S.dwellers.length>=6,t:"Население 6+"},eff:{roomArmor:0.3}},
-  exp1:{n:T("Глубинные маяки"),ic:"📡",desc:T("+40% к добыче из экспедиций, риск ↓."),cost:44,req:[],gate:{ok:()=>hasRoom("hangar"),t:"Нужен ангар-шлюз"},eff:{expMult:0.4}},
+  exp1:{n:T("Глубинные маяки"),ic:"📡",desc:T("+40% к добыче из экспедиций, риск ниже."),cost:44,req:[],gate:{ok:()=>hasRoom("hangar"),t:"Нужен ангар-шлюз"},eff:{expMult:0.4}},
   eff1:{n:T("Автоматизация"),ic:"🤖",desc:T("+15% ко всему производству."),cost:60,req:["power1"],gate:{ok:()=>S.rooms.some(r=>r.lvl>=3),t:"Отсек ур. 3+"},eff:{allMult:0.15}},
   pop1:{n:T("Программа колонии"),ic:"👶",desc:T("Прирост населения вдвое быстрее."),cost:70,req:["life1"],gate:{ok:()=>S.dwellers.length>=8,t:"Население 8+"},eff:{popMult:1}},
   weap1:{n:T("Тактика роя"),ic:"⚔",desc:T("+30% к урону экипажа в бою."),cost:80,req:["armor1"],gate:{ok:()=>hasRoom("armory"),t:"Нужен арсенал"},eff:{dmgMult:0.3}},
@@ -1033,17 +627,20 @@ const FLOOR_W=3;    // клеток на этаже
 // Обучающие карточки (мягкие пояснения при открытии механик)
 const TUT={
   welcome:{ic:"🌊",t:T("Добро пожаловать на «Нерей»"),x:T("Вы на дне океана. Экипаж постоянно тратит <b>кислород, провизию и воду</b> — следите за верхней панелью: красный минус у ресурса значит, что запас тает. Нажимайте на отсеки, чтобы назначать в них жителей и улучшать их. Жёлтая подсветка 👆 показывает, куда нажать для текущей задачи.")},
-  advanced:{ic:"🔧",t:T("Открыты новые отсеки"),x:T("Мастерская запущена! В <b>Стройке</b> появились новые типы отсеков: лаборатория, ангар, лазарет, тренировочный зал, торговый шлюз. А в самой мастерской можно <b>крафтить снаряжение</b> — загляните в неё.")},
-  combat:{ic:"📡",t:T("Сонар засёк движение"),x:T("Из тьмы к станции что-то приближается. Скоро начнутся <b>атаки тварей бездны</b>. Постройте <b>Арсенал</b> и скрафтите <b>оружие</b> в Мастерской, затем наденьте его на экипаж — вооружённые люди дают отпор автоматически.")},
+  advanced:{ic:"🔧",t:T("Открыты новые отсеки"),x:T("Мастерская запущена! Открылись новые типы отсеков: лаборатория, ангар, лазарет, тренировочный зал и торговый шлюз — стройте их через ＋ на плане станции. А в самой мастерской можно <b>собирать снаряжение</b>, загляните в неё.")},
+  combat:{ic:"📡",t:T("Сонар засёк движение"),x:T("Из тьмы к станции что-то приближается. Скоро начнутся <b>атаки тварей бездны</b>. Постройте <b>арсенал</b> и соберите <b>оружие</b> в мастерской, затем наденьте его на экипаж — вооружённые люди дают отпор автоматически.")},
   research:{ic:"🔬",t:T("Открыта Наука"),x:T("Лаборатория генерирует <b>очки исследований</b>. Появилась вкладка <b>Наука</b> — тратьте очки на постоянные улучшения: больше производства, крепче броня, сильнее урон, дешевле стройка.")},
   expedition:{ic:"🚪",t:T("Открыта Бездна"),x:T("Ангар готов. Во вкладке <b>Бездна</b> отправляйте разведчиков во тьму — они приносят металл, кредиты и науку. Чем глубже, тем больше добыча, но выше риск вернуться раненым.")},
   specs:{ic:"🎓",t:T("У экипажа есть профессии"),x:T("Каждый житель имеет <b>специализацию</b> (инженер, биолог, боец, разведчик, механик, медик, торговец) — она даёт крупный бонус в профильном деле. Ставьте людей на подходящие отсеки: ★ отмечает удачное совпадение. Специализацию можно сменить в карточке жителя за кредиты (кнопка 🎓).")},
-  gear:{ic:"✨",t:T("Снаряжение бывает редким"),x:T("У оружия и костюмов есть <b>уровни редкости</b>: обычное, необычное, редкое, легендарное и абиссальное — каждый следующий заметно сильнее. Редкость выпадает случайно при крафте; <b>механик</b> в мастерской повышает шанс. Редкие вещи также находятся в экспедициях.")},
+  gear:{ic:"✨",t:T("Снаряжение бывает редким"),x:T("У оружия и костюмов есть <b>уровни редкости</b>: обычный, необычный, редкий, легендарный и абиссальный — каждый следующий заметно сильнее. Редкость определяется случайно при сборке, а <b>механик</b> в мастерской повышает шансы. Редкие вещи попадаются и в экспедициях.")},
   merge:{ic:"⧉",t:T("Отсеки можно объединять"),x:T("Если построить отсек <b>того же типа и уровня</b> вплотную к существующему, они <b>автоматически сольются</b> в один широкий (до ×3): больше экипажа, выше эффективность, меньше расход энергии. Новый отсек всегда 1-го уровня — пристраивайте его к отсеку 1-го уровня. Клетку для стройки можно выбрать, нажав «＋» на плане.")},
 };
 
-const FNAMES=[T("Ирис"),T("Кай"),T("Нора"),T("Тимур"),T("Лея"),T("Осип"),T("Вера"),T("Дэн"),T("Мила"),T("Артём"),T("Соня"),T("Глеб"),T("Ая"),T("Рома"),T("Ника"),T("Юна"),T("Лев"),T("Дина"),T("Марк"),T("Эля"),T("Гор"),T("Тая"),T("Игнат"),T("Зоя"),T("Феликс"),T("Рита")];
-const LNAMES=[T("Волкова"),T("Крон"),T("Сато"),T("Мор"),T("Ласт"),T("Эйк"),T("Гейл"),T("Драго"),T("Норд"),T("Веспер"),T("Финн"),T("Раск"),T("Кио"),T("Стрэйт"),T("Оул"),T("Крейн")];
+// Имена разделены по роду: в тексте согласуются глаголы («вернулся» / «вернулась»).
+const FNAMES_M=["Кай","Тимур","Осип","Дэн","Артём","Глеб","Рома","Лев","Марк","Гор","Игнат","Феликс"];
+const FNAMES_F=["Ирис","Нора","Лея","Вера","Мила","Соня","Ая","Ника","Юна","Дина","Эля","Тая","Зоя","Рита"];
+// Фамилии несклоняемые — подходят и мужчинам, и женщинам.
+const LNAMES=["Волк","Крон","Сато","Мор","Ласт","Эйк","Гейл","Драго","Норд","Веспер","Финн","Раск","Кио","Стрэйт","Оул","Крейн"];
 
 /* ============================ СОСТОЯНИЕ ============================ */
 let S=null; let confirmCb=null, confirmMsg=""; let lastAdTime=0;
@@ -1126,6 +723,7 @@ function migrateUnlocks(){
 function migrateItems(){
   if(!S.items) S.items=[];
   S.dwellers.forEach(d=>{
+    if(!d.sex) d.sex = (d.ic==="👩‍🚀") ? "f" : "m";
     if(!d.spec) d.spec=pick(SPEC_KEYS);
     ["weapon","suit"].forEach(slot=>{
       if(typeof d[slot]==="string"){ const it=newItem(d[slot],"common"); d[slot]=it.id; }
@@ -1150,11 +748,11 @@ function migrateRooms(){
 }
 
 function makeDweller(boost,forcedSpec){
-  const g=Math.random()<.5;
-  const nm=pick(FNAMES)+" "+pick(LNAMES);
+  const male=Math.random()<.5;
+  const nm=pick(male?FNAMES_M:FNAMES_F)+" "+pick(LNAMES);
   const base=()=>1+Math.floor(Math.random()*3)+(boost||0);
   return {
-    id:nid(), name:nm, ic: g?"🧑‍🚀":"👩‍🚀",
+    id:nid(), name:nm, sex: male?"m":"f", ic: male?"🧑‍🚀":"👩‍🚀",
     stats:{str:base(),agi:base(),int:base(),end:base(),cha:base()},
     lvl:1, xp:0, hp:0, maxhp:0, room:null, weapon:null, suit:null,
     status:"idle", train:null, exp:null, spec:forcedSpec||pick(SPEC_KEYS),
@@ -1178,6 +776,8 @@ function rollRarity(luck){
   return RAR_KEYS[0];
 }
 function specOf(d){ return SPECS[d.spec]||SPECS.none; }
+// Согласование глаголов и причастий с полом жителя: gf(d,"вернулся","вернулась")
+function gf(d,m,f){ return (d && d.sex==="f") ? f : m; }
 
 function dwellerMaxHp(d){
   let h=20+d.lvl*6+d.stats.end*3;
@@ -1196,6 +796,15 @@ function addRoom(type,free){
 
 /* ============================ ХЕЛПЕРЫ ============================ */
 function pick(a){return a[Math.floor(Math.random()*a.length)]}
+// Форма существительного при числе: plural(1,"кредит","кредита","кредитов") → «кредит»
+function plural(n,one,few,many){
+  n=Math.abs(Math.floor(n))%100;
+  const d=n%10;
+  if(n>10&&n<20) return many;
+  if(d===1) return one;
+  if(d>=2&&d<=4) return few;
+  return many;
+}
 function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
 function fmt(n){ n=Math.floor(n); if(n>=100000)return (n/1000).toFixed(0)+T("к"); if(n>=10000)return (n/1000).toFixed(1)+T("к"); return ""+n;}
 function has(rk){return S.researched.includes(rk)}
@@ -1249,7 +858,7 @@ function addFloor(){
   const c=floorCost();
   if(!canAfford(c)) { toast(T("Не хватает ресурсов на новый этаж"),"bad"); return; }
   pay(c); S.floors=floorCount()+1;
-  logEvent(`${T("⚙ Пробурен новый этаж — уровень")} <b>${floorCount()}</b>${T(". Свободно")} ${FLOOR_W} ${T("отсека.")}`,"gold");
+  logEvent(`⚙ Пробурен новый этаж — уровень <b>${floorCount()}</b>. Свободно ${FLOOR_W} ${plural(FLOOR_W,"клетка","клетки","клеток")}.`,"gold");
   toast(`${T("⚙ Этаж")} ${floorCount()} ${T("готов")}`,"good");
   setTimeout(()=>YA.fullscreen(),500);
   render();
@@ -1456,12 +1065,12 @@ function tickOnce(offline){
   if(med.length){
     let healPower=0; med.forEach(r=>{ healPower+= r.lvl*2; roomCrew(r).forEach(d=>{ let hv=d.stats.int*0.5; const sp=specOf(d); if(sp.heal) hv*=(1+sp.heal); healPower+=hv; }); });
     S.dwellers.forEach(d=>{
-      if(d.status==="injured"){ d.hp+=healPower*0.2; if(d.hp>=d.maxhp){ d.hp=d.maxhp; d.status="idle"; d.room=null; logEvent("<b>"+d.name+T("</b> вылечен и снова в строю."),"good"); }}
+      if(d.status==="injured"){ d.hp+=healPower*0.2; if(d.hp>=d.maxhp){ d.hp=d.maxhp; d.status="idle"; d.room=null; logEvent("<b>"+d.name+"</b> "+gf(d,"вылечен","вылечена")+" и снова в строю.","good"); }}
       else if(d.hp<d.maxhp) d.hp=Math.min(d.maxhp,d.hp+healPower*0.05);
     });
   }
   // естественная регенерация чуть-чуть
-  S.dwellers.forEach(d=>{ if(d.status!=="injured"&&d.hp<d.maxhp) d.hp=Math.min(d.maxhp,d.hp+0.15); if(d.hp<=0&&d.status!=="injured"){ d.hp=0; d.status="injured"; d.room=null; logEvent("<b>"+d.name+T("</b> без сознания — доставлен в лазарет."),"bad"); }});
+  S.dwellers.forEach(d=>{ if(d.status!=="injured"&&d.hp<d.maxhp) d.hp=Math.min(d.maxhp,d.hp+0.15); if(d.hp<=0&&d.status!=="injured"){ d.hp=0; d.status="injured"; d.room=null; logEvent("<b>"+d.name+"</b> без сознания — "+gf(d,"доставлен","доставлена")+" в лазарет.","bad"); }});
 
   // Тренировки в зале
   S.rooms.filter(r=>r.type==="gym").forEach(r=>{
@@ -1473,7 +1082,7 @@ function tickOnce(offline){
   });
 
   // Опыт работающим
-  S.dwellers.forEach(d=>{ if(d.status==="working"){ d.xp+=0.8; const need=d.lvl*20; if(d.xp>=need){ d.xp-=need; d.lvl++; initDwellerHp(d); if(!offline)logEvent("<b>"+d.name+T("</b> достиг уровня ")+d.lvl+".","good"); }}});
+  S.dwellers.forEach(d=>{ if(d.status==="working"){ d.xp+=0.8; const need=d.lvl*20; if(d.xp>=need){ d.xp-=need; d.lvl++; initDwellerHp(d); if(!offline)logEvent("<b>"+d.name+"</b> "+gf(d,"достиг","достигла")+" уровня "+d.lvl+".","good"); }}});
 
   // Прирост населения
   // Новобранцы приходят только если есть жильё (жилой отсек) и хватает провизии/воды.
@@ -1487,7 +1096,7 @@ function tickOnce(offline){
     growth=Math.min(growth,4); // потолок: не быстрее ~1 новичка за 25с, чтобы не наплывали толпой
     if(S.res.food>50&&S.res.water>50){
       S._grow=(S._grow||0)+growth;
-      if(S._grow>=100){ S._grow=0; const nd=makeDweller(); initDwellerHp(nd); S.dwellers.push(nd); logEvent(T("К станции пришвартовался новичок: <b>")+nd.name+"</b>.","good"); if(!offline)toast(T("🚪 Новый член экипажа: ")+nd.name,"good"); }
+      if(S._grow>=100){ S._grow=0; const nd=makeDweller(); initDwellerHp(nd); S.dwellers.push(nd); logEvent("К станции пришвартовалась капсула. Новый член экипажа: <b>"+nd.name+"</b>.","good"); if(!offline)toast(T("🚪 Новый член экипажа: ")+nd.name,"good"); }
     }
   }
 
@@ -1551,7 +1160,7 @@ function processCombat(offline){
     S.res.metal=clamp(S.res.metal+rew.metal,0,storageCap());
     S.res.credits=clamp(S.res.credits+rew.credits,0,storageCap());
     S.research+=Math.ceil(a.maxhp*0.05);
-    logEvent("✅ <b>"+a.name+T("</b> отбит! Трофеи: +")+rew.metal+" 🔩, +"+rew.credits+" 💠","good");
+    logEvent("✅ Нападение отбито: <b>"+a.name+"</b>. Трофеи: +"+rew.metal+" 🔩, +"+rew.credits+" 💠","good");
     if(!offline){ toast(T("✅ Тварь уничтожена! +")+rew.metal+"🔩 +"+rew.credits+"💠","good"); setTimeout(()=>YA.fullscreen(),600); }
     S.attack=null; return;
   }
@@ -1567,7 +1176,7 @@ function processCombat(offline){
     const crew=roomCrew(tr);
     const victim=pick(crew);
     victim.hp-=dmg;
-    if(victim.hp<=0){ victim.hp=0; victim.status="injured"; victim.room=null; logEvent("💀 <b>"+victim.name+T("</b> тяжело ранен ")+a.name+".","bad"); }
+    if(victim.hp<=0){ victim.hp=0; victim.status="injured"; victim.room=null; logEvent("💀 Тяжёлое ранение: <b>"+victim.name+"</b>. Атаковал противник: <b>"+a.name+"</b>.","bad"); }
   } else {
     // некому защищать — бьёт по людям напрямую
     const v=pick(S.dwellers.filter(d=>d.status!=="expedition"));
@@ -1589,11 +1198,11 @@ function rushDefense(){
 function startExpedition(did){
   const d=dwellerById(did); if(!d) return;
   if(S.expeditions.length>=expeditionSlots()){ toast(T("Нет свободных слотов ангара"),"bad"); return; }
-  if(d.status==="injured"){ toast(T("Раненый не может идти"),"bad"); return; }
+  if(d.status==="injured"){ toast(T("Раненый член экипажа не может отправиться в экспедицию"),"bad"); return; }
   d.room=null; d.status="expedition";
   const dur=45+Math.floor(Math.random()*40); // секунд
   S.expeditions.push({did, name:d.name, left:dur, dur, depth:1+Math.floor((S.t/300))});
-  sfx("expedition"); logEvent("🚪 <b>"+d.name+T("</b> ушёл в экспедицию во тьму."),"");
+  sfx("expedition"); logEvent("🚪 <b>"+d.name+"</b> "+gf(d,"ушёл","ушла")+" в экспедицию во тьму.","");
   closeModal(); checkQuest(); render();
 }
 function resolveExpedition(e,offline){
@@ -1606,20 +1215,20 @@ function resolveExpedition(e,offline){
   S.res.metal=clamp(S.res.metal+metal,0,storageCap());
   S.res.credits=clamp(S.res.credits+credits,0,storageCap());
   S.research+=Math.floor(1+Math.random()*3*e.depth);
-  let msg="🎁 <b>"+d.name+T("</b> вернулся: +")+metal+" 🔩, +"+credits+" 💠";
+  let msg="🎁 <b>"+d.name+"</b> "+gf(d,"вернулся","вернулась")+": +"+metal+" 🔩, +"+credits+" 💠";
   // шанс найти снаряжение
   if(Math.random()<0.32){
     const key=pick(Object.keys(CRAFT));
     const rar=rollRarity(e.depth + (d.stats.int*0.2) + (sp.scout?2:0));
     newItem(key,rar);
-    msg+=`${T(", а также")} <span style="color:${RARITY[rar].c}">${CRAFT[key].ic} ${RARITY[rar].n} ${CRAFT[key].n}</span>`;
+    msg+=`${T(", а также")} <span style="color:${RARITY[rar].c}">${CRAFT[key].ic} ${itemFullName(rar,key)}</span>`;
   }
   // риск ранения
   const risk=clamp((0.28 - eff("expMult")*0.2)*(1-(sp.expRisk||0)), 0.03, 0.4);
   if(Math.random()<risk){
     d.hp-=8+Math.random()*22*e.depth/2;
-    if(d.hp<=0){ d.hp=0; d.status="injured"; msg+=T(" — но вернулся тяжело раненым!"); }
-    else { d.status="idle"; msg+=T(" (получил травмы)"); }
+    if(d.hp<=0){ d.hp=0; d.status="injured"; msg+=" — но с тяжёлыми ранениями!"; }
+    else { d.status="idle"; msg+=" ("+gf(d,"получил","получила")+" травмы)"; }
   } else { d.status="idle"; }
   if(d.status!=="injured") d.status="idle";
   d.xp+=15;
@@ -1635,7 +1244,7 @@ function randomIncident(){
   const r=pick(rooms);
   if(roll<0.4){
     r.hurt=Math.min(4,r.hurt+2);
-    logEvent(T("⚠ Пробоина в отсеке «")+ROOMS[r.type].n+T("» — производство падает."),"bad");
+    logEvent("⚠ Пробоина в отсеке «"+ROOMS[r.type].n+"» — производство падает.","bad");
     toast(T("⚠ Утечка в «")+ROOMS[r.type].n+"»","bad");
   } else if(roll<0.7){
     const loss=Math.floor(S.res.power*0.3);
@@ -1644,13 +1253,14 @@ function randomIncident(){
     toast(T("⚡ Перегрузка сети"),"bad");
   } else if(roll<0.85){
     S.threat=Math.min(99,S.threat+30);
-    logEvent(T("📡 Сонар засёк движение в темноте... угроза растёт."),"bad");
+    logEvent(T("📡 Сонар засёк движение в темноте… Угроза растёт."),"bad");
   } else {
     // хорошее: находка
     const find=Math.floor(30+Math.random()*60);
     S.res.credits=clamp(S.res.credits+find,0,storageCap());
-    logEvent(T("💠 Обломки затонувшего судна: +")+find+T(" кредитов."),"gold");
-    toast(T("💠 Находка: +")+find+T(" кредитов"),"good");
+    const cw=plural(find,"кредит","кредита","кредитов");
+    logEvent("💠 Обломки затонувшего судна: +"+find+" "+cw+".","gold");
+    toast("💠 Находка: +"+find+" "+cw,"good");
   }
 }
 
@@ -1669,7 +1279,7 @@ function renderTop(){
   const cap=storageCap();
   const rates=computeRates();
   const sci = unlocked("research")? ` · 🔬 ${fmt(S.research)}`:"";
-  let h=`<div class="stationName"><span>${T("НЕРЕЙ ·")} <b>${T("ГЛУБИНА 6800М")}</b></span><span>👥 ${S.dwellers.length}/${popCap()}${sci}</span></div>`;
+  let h=`<div class="stationName"><span>${T("НЕРЕЙ ·")} <b>${T("ГЛУБИНА 6800 М")}</b></span><span>👥 ${S.dwellers.length}/${popCap()}${sci}</span></div>`;
   for(const k in RES){
     const v=S.res[k], rt=rates[k]||0;
     const pct=clamp(v/cap*100,0,100);
@@ -1694,7 +1304,7 @@ function renderNav(){
     if(t[0]==="crew"){ const inj=S.dwellers.filter(d=>d.status==="injured").length; if(inj)badge=`<span class="badge">${inj}</span>`; }
     if(t[0]==="expedition"){ const free=expeditionSlots()-S.expeditions.length; if(free>0&&S.dwellers.some(d=>d.status==="idle"))badge=`<span class="badge" style="background:var(--teal);color:#03202a">${free}</span>`; }
     if(t[0]==="tech"){ const can=Object.keys(RESEARCH).filter(k=>!has(k)&&RESEARCH[k].req.every(has)&&S.research>=RESEARCH[k].cost).length; if(can)badge=`<span class="badge" style="background:var(--pur)">${can}</span>`; }
-    if(!badge && !S.seenTab[t[0]] && S.tab!==t[0]) badge=`<span class="badge" style="background:var(--gold);color:#2a1e00">NEW</span>`;
+    if(!badge && !S.seenTab[t[0]] && S.tab!==t[0]) badge=`<span class="badge newb" style="background:var(--gold);color:#2a1e00">НОВОЕ</span>`;
     h+=`<div class="nav-b ${S.tab===t[0]?'act':''}" data-q="nav-${t[0]}" onclick="setTab('${t[0]}')"><span class="ni">${t[1]}</span>${t[2]}${badge}</div>`;
   });
   $("nav").innerHTML=h;
@@ -1741,6 +1351,7 @@ function roomTile(r){
   else if(r.type==="hangar") sub=`${T("слоты:")} ${r.lvl*size}`;
   else if(r.type==="gym") sub=T("тренировки");
   else if(r.type==="medbay") sub=T("лечение");
+  else if(r.type==="armory") sub=T("оборона");
   else sub=`<span style="color:var(--dim)">${def.n}</span>`;
   let dots="";
   for(let i=0;i<capC;i++){ dots+=`<span class="dot ${crew[i]?'on':''}"></span>`; }
@@ -1780,7 +1391,7 @@ function renderStation(){
   h+=`<p class="small mut center" style="margin-top:10px">${T("Нажмите на пустую клетку, чтобы построить именно там. Однотипные отсеки одного уровня рядом сливаются в широкий (до ×3).")}</p>`;
   h+=adBar();
   const idle=S.dwellers.filter(d=>d.status==="idle");
-  if(idle.length) h+=`<div class="card" style="margin-top:10px"><div class="row between"><span class="small">${T("🕑 Без дела:")} <b>${idle.length}</b> ${T("чел.")}</span><button class="btn sm" onclick="setTab('crew')">${T("Распределить")}</button></div></div>`;
+  if(idle.length) h+=`<div class="card" style="margin-top:10px"><div class="row between"><span class="small">🕑 Без дела: <b>${idle.length}</b> ${plural(idle.length,"человек","человека","человек")}</span><button class="btn sm" onclick="setTab('crew')">${T("Распределить")}</button></div></div>`;
   return h;
 }
 
@@ -1843,8 +1454,8 @@ function crewRow(d){
   let loc="";
   if(d.status==="working"&&d.room){ const r=roomById(d.room); loc=r?ROOMS[r.type].ic+" "+ROOMS[r.type].n:""; }
   else if(d.status==="expedition") loc=T("🚪 В бездне");
-  else if(d.status==="injured") loc=T("⛑ Ранен");
-  else loc=T("🕑 Свободен");
+  else if(d.status==="injured") loc="⛑ "+gf(d,"Ранен","Ранена");
+  else loc="🕑 "+gf(d,"Свободен","Свободна");
   const sp=specOf(d);
   const wI=itemById(d.weapon), sI=itemById(d.suit);
   const gear=`${wI?` · <span style="color:${RARITY[wI.rar].c}">${CRAFT[wI.key].ic}</span>`:''}${sI?` <span style="color:${RARITY[sI.rar].c}">${CRAFT[sI.key].ic}</span>`:''}`;
@@ -1873,7 +1484,7 @@ function renderExpedition(){
   if(S.expeditions.length<slots){
     const avail=S.dwellers.filter(d=>d.status==="idle"||d.status==="working").sort((a,b)=>(a.status==="idle"?0:1)-(b.status==="idle"?0:1)); // свободные — первыми, чтобы не отправлять рабочего с реактора
     h+=`<div class="card"><div class="small mut" style="margin-bottom:6px">${T("Отправить разведчика:")}</div>`;
-    if(!avail.length) h+=`<p>${T("Нет свободного экипажа.")}</p>`;
+    if(!avail.length) h+=`<p>${T("Свободного экипажа нет.")}</p>`;
     avail.forEach(d=>{
       h+=`<div class="row between" style="padding:5px 0;border-bottom:1px solid var(--line)">
         <div class="row"><div class="port">${d.ic}</div><div><div class="small" style="font-weight:600">${d.name}</div><div class="small mut">🎯${d.stats.agi} 🧠${d.stats.int} ❤${Math.ceil(d.hp)}${(()=>{const w=itemById(d.weapon);return w?' '+CRAFT[w.key].ic:'';})()}</div></div></div>
@@ -1881,7 +1492,7 @@ function renderExpedition(){
     });
     h+=`</div>`;
   }
-  h+=`<p class="small mut center">${T("Разведчики приносят металл, кредиты и очки исследований. Чем глубже — тем больше добычи и риска.")}</p>`;
+  h+=`<p class="small mut center">${T("Разведчики приносят металл, кредиты и очки исследований. Чем глубже, тем больше добычи и риска.")}</p>`;
   return h;
 }
 
@@ -1905,9 +1516,9 @@ function renderTech(){
 
 function renderLog(){
   let h=`<div class="panelTitle">${T("Журнал станции")}</div>`;
-  h+=`<div class="card"><div class="row between" style="flex-wrap:wrap;gap:6px"><button class="btn sm" onclick="saveGame(true)">${T("💾 Сохранить")}</button><button class="btn sm" onclick="exportSave()">${T("⬇ Экспорт")}</button><button class="btn sm" onclick="importSave()">${T("⬆ Импорт")}</button><button class="btn sm warnb" onclick="hardReset()">${T("🗑 Заново")}</button><button class="btn sm" onclick="toggleMute()">${audioMuted?"🔇":"🔊"}</button><button class="btn sm ${musicOn&&!audioMuted?"gold":""}" onclick="toggleMusic()">🎵</button></div><div class="row" style="gap:6px;margin-top:8px"><span class="small mut">${T("Язык / Language")}</span><button class="btn sm ${LANG==="ru"?"gold":""}" onclick="setLang('ru')">RU</button><button class="btn sm ${LANG==="en"?"gold":""}" onclick="setLang('en')">EN</button></div><div class="small mut" style="margin-top:8px">${T("Прогресс автосохраняется и продолжает идти, пока вас нет.")}</div></div>`;
+  h+=`<div class="card"><div class="row between" style="flex-wrap:wrap;gap:6px"><button class="btn sm" onclick="saveGame(true)">${T("💾 Сохранить")}</button><button class="btn sm" onclick="exportSave()">${T("⬇ Экспорт")}</button><button class="btn sm" onclick="importSave()">${T("⬆ Импорт")}</button><button class="btn sm warnb" onclick="hardReset()">${T("🗑 Заново")}</button><button class="btn sm" onclick="toggleMute()">${audioMuted?"🔇":"🔊"}</button><button class="btn sm ${musicOn&&!audioMuted?"gold":""}" onclick="toggleMusic()">🎵</button></div><div class="small mut" style="margin-top:8px">${T("Прогресс автосохраняется и продолжает идти, пока вас нет.")}</div></div>`;
   h+=`<div class="card">`;
-  if(!S.log.length) h+=`<p>${T("Пока тихо...")}</p>`;
+  if(!S.log.length) h+=`<p>${T("Пока тихо…")}</p>`;
   S.log.forEach(l=>{ h+=`<div class="logline ${l.cls}">${l.txt}</div>`; });
   h+=`</div>`;
   return h;
@@ -1948,7 +1559,7 @@ function openRoom(id){
     h+=`<div class="sep"></div><div class="small mut">${T("Экипаж")} ${crew.length}/${capC}</div>`;
     crew.forEach(d=>{
       const m=specOf(d).rooms&&specOf(d).rooms.includes(r.type);
-      h+=`<div class="row between" style="padding:5px 0"><div class="row"><div class="port">${d.ic}</div><div><div class="small" style="font-weight:600">${d.name} ${specOf(d).ic}${m?' <span style="color:var(--gold)">★</span>':''}</div><div class="small mut">${T("ур.")}${d.lvl}${def.stat?` · ${STAT_IC[def.stat]} ${d.stats[def.stat]}`:''}${r.type==='gym'&&d.train?` · ${T("качает")} ${STATS[d.train]}`:''}</div></div></div><button class="btn sm" onclick="assignDweller(${d.id},null);openRoom(${id})">${T("Убрать")}</button></div>`;
+      h+=`<div class="row between" style="padding:5px 0"><div class="row"><div class="port">${d.ic}</div><div><div class="small" style="font-weight:600">${d.name} ${specOf(d).ic}${m?' <span style="color:var(--gold)">★</span>':''}</div><div class="small mut">${T("ур.")}${d.lvl}${def.stat?` · ${STAT_IC[def.stat]} ${d.stats[def.stat]}`:''}${r.type==='gym'&&d.train?` · ${T("тренировка:")} ${STATS[d.train]}`:''}</div></div></div><button class="btn sm" onclick="assignDweller(${d.id},null);openRoom(${id})">${T("Убрать")}</button></div>`;
     });
     if(crew.length<capC){
       const idle=S.dwellers.filter(d=>d.status==="idle");
@@ -1966,7 +1577,7 @@ function openRoom(id){
   // мастерская — крафт
   if(r.type==="workshop"){
     const disc=craftDiscount(r);
-    h+=`<div class="sep"></div><div class="small mut">${T("🔧 Крафт снаряжения")}${disc<1?` · <span style="color:var(--teal)">${T("механик: −20% и выше шанс редкости")}</span>`:` · ${T("редкость выпадает случайно")}`}</div>`;
+    h+=`<div class="sep"></div><div class="small mut">${T("🔧 Сборка снаряжения")}${disc<1?` · <span style="color:var(--teal)">${T("механик: −20% к стоимости и выше шанс редкости")}</span>`:` · ${T("редкость определяется случайно")}`}</div>`;
     Object.keys(CRAFT).filter(ck=>CRAFT[ck].type==="suit"||unlocked("combat")).forEach(ck=>{
       const it=CRAFT[ck];
       const c={}; for(const k in it.cost)c[k]=Math.ceil(it.cost[k]*disc);
@@ -1979,7 +1590,7 @@ function openRoom(id){
 
   // слитый отсек: показать состав
   if(size>1){
-    h+=`<div class="sep"></div><div class="small mut">${T("⧉ Объединённый блок из")} <b>${size}</b> ${T("отсеков (")}${size} ${T("клетки в ряду). Улучшается целиком, вмещает больше экипажа и экономит энергию.")}</div>`;
+    h+=`<div class="sep"></div><div class="small mut">⧉ Объединённый блок из <b>${size}</b> ${plural(size,"отсека","отсеков","отсеков")} (${size} ${plural(size,"клетка","клетки","клеток")} в ряду). Улучшается целиком, вмещает больше экипажа и экономит энергию.</div>`;
   }
 
   // улучшение (уровень 5 — предел, отсек становится элитным)
@@ -2022,10 +1633,10 @@ function openDweller(id){
     suits.forEach(it=>h+=`<button class="btn sm" data-q="equipbtn" style="margin:3px 3px 0 0;border-color:${RARITY[it.rar].c}" onclick="equip(${id},${it.id})">${CRAFT[it.key].ic} <span style="color:${RARITY[it.rar].c}">${CRAFT[it.key].n}</span> +${itemHp(it)}❤</button>`);
     h+=`</div>`;
   } else {
-    h+=`<p class="small mut">${T("Снаряжение крафтится в 🔩 Мастерской или находится в экспедициях, затем надевается здесь.")}</p>`;
+    h+=`<p class="small mut">${T("Снаряжение собирают в мастерской 🔩 или находят в экспедициях, а надевают здесь.")}</p>`;
   }
   h+=`<div class="sep"></div>`;
-  if(d.status==="injured"){ h+=`<p class="small" style="color:var(--warn)">${T("⛑ Ранен — лечится в лазарете (или медленно сам).")}</p>`; }
+  if(d.status==="injured"){ h+=`<p class="small" style="color:var(--warn)">⛑ ${gf(d,"Ранен","Ранена")} — лечится в лазарете или медленно восстанавливается сам${gf(d,"","а")}.</p>`; }
   else {
     if(d.status!=="expedition"){
       const opts=S.rooms.filter(r=>acceptsCrew(r)&&roomCrew(r).length<roomCrewCap(r)&&r.id!==d.room);
@@ -2082,7 +1693,7 @@ function doBuild(type){
   S.buildTarget=null;
   if(res.merged){
     S.seen.merge=1;
-    logEvent(`🏗 <b>${ROOMS[type].n}</b> ${T("пристроен к однотипному и объединён — теперь ×")}${res.merged.size}.`,"gold");
+    logEvent(`🏗 Отсек «${ROOMS[type].n}» пристроен к такому же и объединён — теперь ×${res.merged.size}.`,"gold");
     toast(`⧉ ${ROOMS[type].n} ×${res.merged.size}`,"good");
   } else {
     sfx("build"); logEvent(T("🏗 Построен отсек: <b>")+ROOMS[type].n+"</b>.","good");
@@ -2099,13 +1710,13 @@ function doUpgrade(id){
   const newTier=roomTier(r.lvl);
   if(newTier>oldTier){
     r._tierUp=S.t;
-    logEvent(`✦ «${ROOMS[r.type].n}${T("» вышел на новую ступень —")} <b>${TIER_NAMES[newTier-1]}</b> ${tierStars(r.lvl)}`,"gold");
+    logEvent(`✦ Отсек «${ROOMS[r.type].n}» вышел на новую ступень — <b>${TIER_NAMES[newTier-1]}</b> ${tierStars(r.lvl)}`,"gold");
     toast(`✦ ${ROOMS[r.type].n}: ${TIER_NAMES[newTier-1]} ${"★".repeat(newTier)}`,"good");
   } else {
-    sfx("upgrade"); logEvent("▲ «"+ROOMS[r.type].n+T("» улучшен до ур.")+r.lvl+".","good");
+    sfx("upgrade"); logEvent("▲ Отсек «"+ROOMS[r.type].n+"» улучшен до ур. "+r.lvl+".","good");
   }
   const m=mergeAdjacent(r); // если рядом такой же отсек того же уровня — объединятся
-  if(m){ logEvent(`⧉ «${ROOMS[m.type].n}${T("» объединён с соседним того же уровня — теперь ×")}${m.size}.`,"gold"); toast(`⧉ ${ROOMS[m.type].n} ×${m.size}`,"good"); }
+  if(m){ logEvent(`⧉ Отсек «${ROOMS[m.type].n}» объединён с соседним того же уровня — теперь ×${m.size}.`,"gold"); toast(`⧉ ${ROOMS[m.type].n} ×${m.size}`,"good"); }
   openRoom((m||r).id); checkQuest(); render();
 }
 function demolish(id){
@@ -2115,7 +1726,7 @@ function demolish(id){
   S.rooms=S.rooms.filter(x=>x.id!==id);
   // частичный возврат
   const back=Math.floor(20*r.lvl*(r.size||1)); S.res.metal=clamp(S.res.metal+back,0,storageCap());
-  logEvent(T("Отсек «")+ROOMS[r.type].n+T("» демонтирован (+")+back+" 🔩).","");
+  logEvent("Отсек «"+ROOMS[r.type].n+"» демонтирован (+"+back+" 🔩).","");
   closeModal(); checkQuest(); render();
 }
 function doResearch(k){
@@ -2138,7 +1749,7 @@ function craftItem(ck){
   if(ws) roomCrew(ws).forEach(d=>{ if(d.spec==="mechanic") luck+=2; });
   const rar=rollRarity(luck);
   newItem(ck,rar);
-  const label=`<span style="color:${RARITY[rar].c}">${RARITY[rar].n} ${it.n}</span>`;
+  const label=`<span style="color:${RARITY[rar].c}">${itemFullName(rar,ck)}</span>`;
   logEvent(`${T("🔧 Собрано:")} <b>${label}</b>${T(". Наденьте на экипаж.")}`, rar==="common"?"good":"gold");
   toast(`🔧 ${it.ic} ${label}`,"good");
   queueTut("gear");
@@ -2149,7 +1760,7 @@ function equip(did,itemId){
   if(!it) return;
   const slot=CRAFT[it.key].type==="weapon"?"weapon":"suit";
   d[slot]=it.id; initDwellerHp(d);
-  toast(d.name+T(" надел ")+CRAFT[it.key].ic+" "+RARITY[it.rar].n+" "+CRAFT[it.key].n,"good");
+  toast(d.name+" "+gf(d,"надел","надела")+": "+CRAFT[it.key].ic+" "+itemFullName(it.rar,it.key),"good");
   openDweller(did); checkQuest();
 }
 function unequip(did,slot){
@@ -2192,23 +1803,23 @@ const QUESTS=[
     rew:{metal:35,credits:15}, check:()=> S.rooms.some(r=>r.lvl>=2) },
   { id:"workshop", tab:"build",
     t:"Постройте мастерскую",
-    x:"Мастерская производит металл 🔩 и открывает новые отсеки: лабораторию, ангар, лазарет и другие. Нажмите ＋ на пустой клетке плана станции и постройте её. А внутри неё можно собирать снаряжение.",
+    x:"Мастерская производит металл 🔩 и открывает новые отсеки: лабораторию, ангар, лазарет и другие. Нажмите ＋ на пустой клетке плана станции и постройте её — внутри можно собирать снаряжение.",
     rew:{metal:60,credits:25}, check:()=> hasRoom("workshop") },
   { id:"craft", tab:"station",
     t:"Соберите снаряжение в мастерской",
-    x:"Нажмите на мастерскую на плане станции — внизу её карточки есть раздел «Крафт снаряжения». Соберите любой предмет: скоро из темноты придут твари, и экипажу понадобится защита.",
+    x:"Нажмите на мастерскую на плане станции — внизу её карточки есть раздел «Сборка снаряжения». Соберите любой предмет: скоро из темноты придут твари, и экипажу понадобится защита.",
     rew:{credits:40}, check:()=> S.items.length>0 },
   { id:"equip", tab:"crew",
     t:"Наденьте снаряжение на жителя",
-    x:"Откройте вкладку «Экипаж», нажмите на жителя и в разделе «Надеть со склада» выберите предмет. Оружие 🗡 повышает урон в бою, костюм 🛡 добавляет здоровья.",
+    x:"Откройте вкладку «Экипаж», нажмите на жителя и выберите предмет в разделе «Надеть со склада». Оружие 🗡 повышает урон в бою, костюм 🛡 добавляет здоровья.",
     rew:{credits:40}, check:()=> S.dwellers.some(d=>d.weapon||d.suit) },
   { id:"lab", tab:"build",
     t:"Постройте лабораторию и изучите технологию",
-    x:"Постройте лабораторию: нажмите ＋ на пустой клетке плана станции — и назначьте туда жителя, она начнёт копить очки 🔬. Когда очков хватит, откройте вкладку «Наука» и нажмите «Изучить» у любой технологии: это постоянный бонус.",
+    x:"Постройте лабораторию: нажмите ＋ на пустой клетке плана станции и назначьте туда жителя — она начнёт копить очки 🔬. Когда очков хватит, откройте вкладку «Наука» и нажмите «Изучить» у любой технологии: это постоянный бонус.",
     rew:{metal:70,credits:30}, check:()=> S.researched.length>0 },
   { id:"hangar", tab:"build",
     t:"Постройте ангар и отправьте разведчика",
-    x:"Постройте ангар-шлюз: нажмите ＋ на пустой клетке плана станции, затем откройте вкладку «Бездна» и нажмите «Отправить» у любого жителя. Разведчики приносят металл, кредиты и очки науки; чем глубже — тем богаче добыча, но выше риск ранения.",
+    x:"Постройте ангар-шлюз: нажмите ＋ на пустой клетке плана станции, затем откройте вкладку «Бездна» и нажмите «Отправить» у любого жителя. Разведчики приносят металл, кредиты и очки науки: чем глубже, тем богаче добыча, но выше риск ранения.",
     rew:{metal:80,credits:40}, check:()=> S.expeditions.length>0 || !!S.flags.expDone },
 ];
 /* Куда смотреть игроку: первый совпавший селектор подсвечивается.
@@ -2315,7 +1926,10 @@ function questBar(){
 /* ============================ YANDEX GAMES SDK ============================ */
 const YA = {
   sdk:null, player:null, ready:false, cloud:false, cloudData:null,
-  lastCloudSave:0, adReady:true, introShown:false,
+  lastCloudSave:0, adReady:true, introShown:false, playing:false,
+  // Game Ready API: геймплей идёт / приостановлен
+  gameStart(){ if(!this.ready||this.playing) return; this.playing=true; try{ this.sdk.features.GameplayAPI.start(); }catch(e){} },
+  gameStop(){ if(!this.ready||!this.playing) return; this.playing=false; try{ this.sdk.features.GameplayAPI.stop(); }catch(e){} },
   async init(){
     if(typeof YaGames==="undefined") return;           // локальный запуск вне платформы
     try{
@@ -2323,18 +1937,6 @@ const YA = {
       this.ready = true;
       // сигнал платформе, что игра загрузилась
       try{ this.sdk.features.LoadingAPI.ready(); }catch(e){}
-      // язык платформы: если не совпал с текущим — перезагрузимся один раз
-      try{
-        const l = this.sdk.environment.i18n.lang;
-        const want = (l && l.indexOf("ru")===0) ? "ru" : "en";
-        if(want!==LANG && !localStorage.getItem("abyss_lang")){
-          localStorage.setItem("abyss_lang", want);
-          if(!sessionStorage.getItem("abyss_lang_reload")){
-            sessionStorage.setItem("abyss_lang_reload","1");
-            location.reload(); return;
-          }
-        }
-      }catch(e){}
       // облачные сейвы
       try{
         this.player = await this.sdk.getPlayer({ scopes:false });
@@ -2359,7 +1961,11 @@ const YA = {
     const now=Date.now();
     if(now-lastAdTime < 60000) return; // не чаще раза в 60 сек
     lastAdTime=now;
-    try{ this.sdk.adv.showFullscreenAdv({ callbacks:{ onOpen:()=>{adPlaying=true;stopDrone();stopMusic();}, onClose:()=>{adPlaying=false;startDrone();startMusic();}, onError:()=>{adPlaying=false;startDrone();startMusic();} } }); }catch(e){ adPlaying=false; startDrone(); }
+    try{ this.sdk.adv.showFullscreenAdv({ callbacks:{
+      onOpen:()=>{adPlaying=true;this.gameStop();stopDrone();stopMusic();},
+      onClose:()=>{adPlaying=false;startDrone();startMusic();this.gameStart();},
+      onError:()=>{adPlaying=false;startDrone();startMusic();this.gameStart();}
+    } }); }catch(e){ adPlaying=false; startDrone(); this.gameStart(); }
   },
   // видео с наградой: onDone вызывается только при полном просмотре
   rewarded(onDone){
@@ -2367,12 +1973,12 @@ const YA = {
     let got=false;
     try{
       this.sdk.adv.showRewardedVideo({ callbacks:{
-        onOpen: ()=>{ adPlaying=true; stopDrone(); stopMusic(); },
+        onOpen: ()=>{ adPlaying=true; this.gameStop(); stopDrone(); stopMusic(); },
         onRewarded: ()=>{ got=true; },
-        onClose: ()=>{ adPlaying=false; startDrone(); startMusic(); if(got){ onDone(); render(); } },
-        onError: ()=>{ adPlaying=false; startDrone(); startMusic(); toast(T("Реклама недоступна"),"bad"); }
+        onClose: ()=>{ adPlaying=false; startDrone(); startMusic(); this.gameStart(); if(got){ onDone(); render(); } },
+        onError: ()=>{ adPlaying=false; startDrone(); startMusic(); this.gameStart(); toast(T("Реклама недоступна"),"bad"); }
       }});
-    }catch(e){ adPlaying=false; startDrone(); toast(T("Реклама недоступна"),"bad"); }
+    }catch(e){ adPlaying=false; startDrone(); this.gameStart(); toast(T("Реклама недоступна"),"bad"); }
   }
 };
 
@@ -2388,10 +1994,10 @@ function adBoost(){
   });
 }
 function adHeal(){
-  const hurt = S.dwellers.filter(d=>d.status==="hurt" || d.hp < d.maxhp);
+  const hurt = S.dwellers.filter(d=>d.status==="injured" || d.hp < d.maxhp);
   if(!hurt.length){ toast(T("Раненых нет"),"bad"); return; }
   YA.rewarded(()=>{
-    hurt.forEach(d=>{ d.hp=d.maxhp; if(d.status==="hurt") d.status="idle"; });
+    hurt.forEach(d=>{ d.hp=d.maxhp; if(d.status==="injured"){ d.status="idle"; d.room=null; } });
     logEvent(T("⛑ Медицинский дрон вылечил весь экипаж."),"good");
     toast(T("⛑ Экипаж вылечен"),"good");
   });
@@ -2495,9 +2101,9 @@ function boot(){
   $("intro").classList.add("hidden");
   $("app").classList.remove("hidden");
   S.dwellers.forEach(initDwellerHp);
+  YA.gameStart();
   render();
 }
-applyStaticI18n();
 YA.init();
 document.getElementById("startBtn").onclick=()=>{ ensureAudio(); startDrone(); startMusic(); newGame(); boot(); saveGame(); };
 document.getElementById("loadBtn").onclick=()=>{ ensureAudio(); startDrone(); startMusic(); if(loadGame()){ boot(); } else { toast(T("Сохранение не найдено"),"bad"); } };
@@ -2516,9 +2122,12 @@ setInterval(()=>{ if(S){ tickOnce(false); render(); } },1000);
 setInterval(()=>{ if(S) saveGame(false); },15000);
 window.addEventListener("beforeunload",()=>{ if(S){ saveGame(false); YA.saveCloud(true); } });
 document.addEventListener("visibilitychange",()=>{
-  if(document.hidden){ stopDrone(); stopMusic(); if(S){ saveGame(false); YA.saveCloud(true); } }
-  else if(!adPlaying){ startDrone(); startMusic(); }
+  if(document.hidden){ YA.gameStop(); stopDrone(); stopMusic(); if(S){ saveGame(false); YA.saveCloud(true); } }
+  else if(!adPlaying){ startDrone(); startMusic(); if(S) YA.gameStart(); }
 });
+// потеря фокуса окна (переключение вкладки, сворачивание) — звук замолкает
+window.addEventListener("blur",()=>{ stopDrone(); stopMusic(); });
+window.addEventListener("focus",()=>{ if(!adPlaying && !document.hidden){ startDrone(); startMusic(); } });
 
 // пузырьки для атмосферы
 (function(){
@@ -2536,7 +2145,7 @@ document.addEventListener("visibilitychange",()=>{
 })();
 
 // экспорт функций в глобал (для onclick)
-Object.assign(window,{setTab,toggleMusic,pickCell,clearTarget,addFloor,skipTutorial,applyQuestHighlight,adBoost,adHeal,adRush,setLang,openRoom,openDweller,doBuild,doUpgrade,demolish,doResearch,craftItem,equip,unequip,assignDweller,startExpedition,rushDefense,saveGame,exportSave,importSave,hardReset,closeModal,dismissTut,openRespec,doRespec});
+Object.assign(window,{setTab,toggleMusic,pickCell,clearTarget,addFloor,skipTutorial,applyQuestHighlight,adBoost,adHeal,adRush,openRoom,openDweller,doBuild,doUpgrade,demolish,doResearch,craftItem,equip,unequip,assignDweller,startExpedition,rushDefense,saveGame,exportSave,importSave,hardReset,closeModal,dismissTut,openRespec,doRespec});
 </script>
 </body>
 </html>
