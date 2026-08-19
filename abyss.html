@@ -229,6 +229,45 @@ body{
 #intro h1{font-size:34px;letter-spacing:8px;margin:0;color:var(--cyan);text-shadow:0 0 24px rgba(57,215,230,.6)}
 #intro .sub{color:var(--dim);letter-spacing:3px;font-size:13px}
 #intro p{max-width:440px;font-size:13px;color:var(--txt);line-height:1.6;opacity:.9}
+
+
+/* ================= DESKTOP ================= */
+@media (min-width: 900px){
+  body{overflow:hidden}
+  #app{padding-left:64px}
+  /* nav — боковая панель слева */
+  #nav{position:fixed;left:0;top:0;bottom:0;right:auto;width:64px;flex-direction:column;border-right:1px solid var(--line2);border-top:none;padding:10px 4px;z-index:5}
+  .nav-b{padding:10px 2px 12px}
+  .nav-b .ni{font-size:22px;margin-bottom:2px}
+  .nav-b.act::after{top:auto;bottom:0;left:15%;right:15%;height:2px}
+  .nav-b:hover{color:var(--txt)}
+  /* top — горизонтальная панель ресурсов, шире */
+  #top{padding:10px 16px 8px}
+  .stat{min-width:110px}
+  /* main — многоколоночный grid */
+  #main{padding:12px 18px 18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px;align-content:start}
+  #main > .panelTitle,#main > .questbar,#main > #threat,#main > #station{grid-column:1 / -1}
+  #main > .card{margin-bottom:0}
+  /* station внутри тоже растягивается */
+  #station{max-width:none}
+  /* модалка по центру */
+  #modal{align-items:center;padding:0 20px}
+  .sheet{border-radius:16px;max-width:680px;width:55vw;max-height:78vh;padding:18px 22px 28px}
+  .sheet .grip{display:none}
+  /* hover для десктопа */
+  .btn:hover{filter:brightness(1.25)}
+  .btn:disabled:hover{filter:none}
+  .room:hover{border-color:var(--line2);transform:translateY(-1px)}
+  .room:active{transform:scale(.98)}
+  .gcell:hover{opacity:.75;background:rgba(90,200,230,.08)}
+  .floorbuy:hover{opacity:.85;background:rgba(90,200,230,.06)}
+  .nav-b:hover{color:var(--txt)}
+  /* скроллбар */
+  ::-webkit-scrollbar{width:6px;height:6px}
+  ::-webkit-scrollbar-track{background:rgba(0,0,0,.2)}
+  ::-webkit-scrollbar-thumb{background:rgba(90,200,230,.25);border-radius:3px}
+  ::-webkit-scrollbar-thumb:hover{background:rgba(90,200,230,.45)}
+}
 </style>
 </head>
 <body>
@@ -259,8 +298,178 @@ body{
 <script>
 "use strict";
 
+
+/* ================= МУЗЫКА ================= */
+/* Генеративный эмбиент: ни одного мегабайта аудиофайлов, петля не надоедает,
+   потому что каждый цикл собирается заново из аккордов и редких нот. */
+let musicOn = true;
+try{ musicOn = localStorage.getItem("abyss_music") !== "0"; }catch(e){}
+let musicBus = null, musicTimer = null, musicStep = 0;
+
+// Ре минор — низкий, холодный. Тоника, VI, III, VII: без разрешения, тянет вниз.
+const CHORDS = [
+  [146.83, 174.61, 220.00],  // Dm
+  [116.54, 174.61, 233.08],  // Bb
+  [130.81, 196.00, 246.94],  // F
+  [130.81, 155.56, 196.00],  // Cm
+];
+const LEAD = [587.33, 698.46, 880.00, 1046.50, 1174.66];
+
+function ensureMusicBus(){
+  if(musicBus || !ensureAudio()) return musicBus;
+  musicBus = audioCtx.createGain();
+  musicBus.gain.value = 0.0;
+  const lp = audioCtx.createBiquadFilter();
+  lp.type = 'lowpass'; lp.frequency.value = 1100; lp.Q.value = 0.5;
+  musicBus.connect(lp); lp.connect(audioCtx.destination);
+  return musicBus;
+}
+
+// Мягкая нота с долгой атакой — «дышащий» пад
+function pad(freq, at, dur, vol){
+  const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+  o.type = 'sine'; o.frequency.value = freq;
+  const det = audioCtx.createOscillator(), dg = audioCtx.createGain();
+  det.type = 'sine'; det.frequency.value = freq * 1.004; dg.gain.value = 0.5;
+  g.gain.setValueAtTime(0.0001, at);
+  g.gain.exponentialRampToValueAtTime(vol, at + dur * 0.35);
+  g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+  o.connect(g); det.connect(dg); dg.connect(g); g.connect(musicBus);
+  o.start(at); o.stop(at + dur + 0.1);
+  det.start(at); det.stop(at + dur + 0.1);
+}
+
+function musicTick(){
+  if(!musicOn || audioMuted || adPlaying || !ensureAudio()) return;
+  const bus = ensureMusicBus(); if(!bus) return;
+  const now = audioCtx.currentTime;
+  bus.gain.setTargetAtTime(0.22, now, 2.0);
+  const chord = CHORDS[musicStep % CHORDS.length];
+  chord.forEach((f, i) => pad(f, now + i * 0.12, 11, 0.16 - i * 0.03));
+  // редкая верхняя нота — раз в два аккорда, чтобы не превращалось в мелодию
+  if(musicStep % 2 === 1){
+    const f = LEAD[Math.floor(Math.random() * LEAD.length)];
+    pad(f, now + 2.5 + Math.random() * 2, 5, 0.045);
+  }
+  musicStep++;
+}
+
+function startMusic(){
+  if(!musicOn || audioMuted || musicTimer) return;
+  if(!ensureAudio()) return;
+  ensureMusicBus();
+  musicTick();
+  musicTimer = setInterval(musicTick, 10000);
+}
+function stopMusic(){
+  if(musicTimer){ clearInterval(musicTimer); musicTimer = null; }
+  if(musicBus && audioCtx){ try{ musicBus.gain.setTargetAtTime(0.0001, audioCtx.currentTime, 0.8); }catch(e){} }
+  musicStep = 0;
+}
+function toggleMusic(){
+  musicOn = !musicOn;
+  try{ localStorage.setItem("abyss_music", musicOn ? "1" : "0"); }catch(e){}
+  if(musicOn) startMusic(); else stopMusic();
+  render();
+}
+
+/* ================= AUDIO ================= */
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+let droneNode = null, droneGain = null;
+let audioMuted = false;
+let adPlaying = false;   // во время рекламы игра не звучит вообще
+try{ audioMuted = localStorage.getItem("abyss_muted") === "1"; }catch(e){}
+
+function ensureAudio(){
+  if(!AudioCtx) return false;
+  if(!audioCtx) audioCtx = new AudioCtx();
+  if(audioCtx.state === 'suspended'){ audioCtx.resume(); }
+  return true;
+}
+
+function toggleMute(){
+  audioMuted = !audioMuted;
+  try{ localStorage.setItem("abyss_muted", audioMuted?"1":"0"); }catch(e){}
+  if(audioMuted){ stopDrone(); stopMusic(); } else { startDrone(); startMusic(); }
+  render();
+}
+
+function startDrone(){
+  if(audioMuted || adPlaying || !ensureAudio() || droneNode) return;
+  droneNode = audioCtx.createOscillator();
+  droneGain = audioCtx.createGain();
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.value = 180;
+  droneNode.type = 'sine';
+  droneNode.frequency.value = 42;
+  droneGain.gain.value = 0.04;
+  droneNode.connect(filter);
+  filter.connect(droneGain);
+  droneGain.connect(audioCtx.destination);
+  droneNode.start();
+  // LFO для вариаций гула
+  const lfo = audioCtx.createOscillator();
+  lfo.type = 'sine';
+  lfo.frequency.value = 0.08;
+  const lfoGain = audioCtx.createGain();
+  lfoGain.gain.value = 8;
+  lfo.connect(lfoGain);
+  lfoGain.connect(droneNode.frequency);
+  lfo.start();
+}
+
+function stopDrone(){
+  if(droneGain){ try{ droneGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.5); }catch(e){} }
+  setTimeout(()=>{ if(droneNode){ try{ droneNode.stop(); }catch(e){} droneNode=null; } },600);
+}
+
+function sfx(type){
+  if(audioMuted || adPlaying || !ensureAudio()) return;
+  const now = audioCtx.currentTime;
+  if(type==='build'){
+    const o=audioCtx.createOscillator(); const g=audioCtx.createGain();
+    o.type='sine'; o.frequency.setValueAtTime(440,now); o.frequency.exponentialRampToValueAtTime(880,now+0.15);
+    g.gain.setValueAtTime(0.06,now); g.gain.exponentialRampToValueAtTime(0.001,now+0.25);
+    o.connect(g); g.connect(audioCtx.destination); o.start(now); o.stop(now+0.25);
+  } else if(type==='upgrade'){
+    const o=audioCtx.createOscillator(); const g=audioCtx.createGain();
+    o.type='triangle'; o.frequency.setValueAtTime(330,now); o.frequency.exponentialRampToValueAtTime(660,now+0.2); o.frequency.exponentialRampToValueAtTime(990,now+0.35);
+    g.gain.setValueAtTime(0.07,now); g.gain.exponentialRampToValueAtTime(0.001,now+0.4);
+    o.connect(g); g.connect(audioCtx.destination); o.start(now); o.stop(now+0.4);
+  } else if(type==='attack'){
+    const o=audioCtx.createOscillator(); const g=audioCtx.createGain();
+    o.type='sawtooth'; o.frequency.setValueAtTime(120,now); o.frequency.exponentialRampToValueAtTime(40,now+0.4);
+    g.gain.setValueAtTime(0.08,now); g.gain.exponentialRampToValueAtTime(0.001,now+0.5);
+    o.connect(g); g.connect(audioCtx.destination); o.start(now); o.stop(now+0.5);
+  } else if(type==='bubble'){
+    const bufferSize = audioCtx.sampleRate * 0.12;
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for(let i=0;i<bufferSize;i++) data[i] = (Math.random()*2-1)*Math.pow(1-i/bufferSize,3);
+    const noise = audioCtx.createBufferSource(); noise.buffer = buffer;
+    const filter = audioCtx.createBiquadFilter(); filter.type = 'bandpass'; filter.frequency.value = 800+Math.random()*1200; filter.Q.value = 2;
+    const g = audioCtx.createGain(); g.gain.setValueAtTime(0.04+Math.random()*0.03,now); g.gain.exponentialRampToValueAtTime(0.001,now+0.12);
+    noise.connect(filter); filter.connect(g); g.connect(audioCtx.destination);
+    noise.start(now); noise.stop(now+0.12);
+  } else if(type==='expedition'){
+    const o=audioCtx.createOscillator(); const g=audioCtx.createGain();
+    o.type='sine'; o.frequency.setValueAtTime(600,now); o.frequency.exponentialRampToValueAtTime(200,now+0.3);
+    g.gain.setValueAtTime(0.05,now); g.gain.exponentialRampToValueAtTime(0.001,now+0.35);
+    o.connect(g); g.connect(audioCtx.destination); o.start(now); o.stop(now+0.35);
+  }
+}
+
+// Периодические пузырьки
+setInterval(()=>{
+  if(S && Math.random()<0.25) sfx('bubble');
+}, 4000);
+
 /* ================= i18n ================= */
 const I18N = {
+"⚡ Энергии не хватает":"⚡ Not enough power",
+"Отсеки работают вполсилы. Улучшите реактор или постройте второй — и поставьте в него людей.":"Compartments are running at reduced output. Upgrade the reactor or build a second one — and staff it.",
 "🎯 Задача":"🎯 Objective",
 "🎯 Задача выполнена:":"🎯 Objective complete:",
 "🎯 Готово!":"🎯 Done!",
@@ -321,7 +530,13 @@ const I18N = {
 "🛡 Усиливает оборону станции в бою":"🛡 Boosts station defense in combat",
 "Отсек уже элитный — максимальный уровень":"This compartment is already elite — max level",
 "Скрыть обучение насовсем? Подсказки-задачи больше не появятся.":"Hide the tutorial for good? Objective hints will no longer appear.",
-"Реклама недоступна":"Ad unavailable",
+"Отмена":"Cancel",
+"Да":"Yes",
+"🔇 Звук выключен":"🔇 Sound off",
+"🔊 Звук включён":"🔊 Sound on",
+"🆘 Спасательная капсула прибыла":"🆘 Rescue capsule arrived",
+"Весь экипаж погиб. Через 30 секунд прибудет спасательная капсула с новым членом экипажа.":"The entire crew is dead. A rescue capsule with a new crew member will arrive in 30 seconds.",
+"🆘 Капсула спасения":"🆘 Rescue capsule",
 "⚡ Ускорение производства ×2 на 4 часа.":"⚡ Production boosted ×2 for 4 hours.",
 "⚡ ×2 к производству на 4 часа":"⚡ ×2 production for 4 hours",
 "Раненых нет":"Nobody is wounded",
@@ -720,19 +935,19 @@ const STAT_IC = {str:"💪",agi:"🎯",int:"🧠",end:"🛡",cha:"✨"};
 // Типы комнат
 const ROOMS = {
   command:{n:T("Центр управления"),ic:"🛰",stat:null,cap:0,produces:null,power:0,desc:T("Сердце станции. Даёт немного всего."),baseCost:{},unlock:null,core:true},
-  reactor:{n:T("Термоядерный реактор"),ic:"⚡",stat:"int",produces:"power",base:6,power:0,desc:T("Вырабатывает энергию для всех систем."),baseCost:{metal:30,credits:0}},
-  oxygen:{n:T("Кислородная станция"),ic:"🫧",stat:"end",produces:"oxygen",base:3,power:3,desc:T("Электролиз воды в кислород. Дышите."),baseCost:{metal:35}},
-  farm:{n:T("Гидропонная ферма"),ic:"🥬",stat:"end",produces:"food",base:3,power:2,desc:T("Выращивает провизию под лампами."),baseCost:{metal:35}},
-  desal:{n:T("Опреснитель"),ic:"💧",stat:"int",produces:"water",base:3,power:2,desc:T("Забортная вода → питьевая."),baseCost:{metal:35}},
-  workshop:{n:T("Мастерская"),ic:"🔩",stat:"str",produces:"metal",base:2,power:3,desc:T("Переплавка обломков в металл. Здесь крафтят снаряжение."),baseCost:{metal:40,credits:20}},
-  market:{n:T("Торговый шлюз"),ic:"💠",stat:"cha",produces:"credits",base:2,power:3,desc:T("Торговля с проходящими субмаринами."),baseCost:{metal:40}},
-  lab:{n:T("Лаборатория"),ic:"🔬",stat:"int",produces:"research",base:0.7,power:4,desc:T("Генерирует очки исследований."),baseCost:{metal:55,credits:40}},
-  quarters:{n:T("Жилой отсек"),ic:"🛏",stat:"cha",produces:null,power:1,desc:T("+2 к лимиту населения. Харизма ускоряет прирост."),baseCost:{metal:30},popCap:2},
-  medbay:{n:T("Лазарет"),ic:"⛑",stat:"int",produces:null,power:3,desc:T("Лечит раненых членов экипажа."),baseCost:{metal:45,credits:20}},
+  reactor:{n:T("Термоядерный реактор"),ic:"⚡",stat:"int",produces:"power",base:6.5,power:0,desc:T("Вырабатывает энергию для всех систем."),baseCost:{metal:30,credits:0}},
+  oxygen:{n:T("Кислородная станция"),ic:"🫧",stat:"end",produces:"oxygen",base:3.5,power:3,desc:T("Электролиз воды в кислород. Дышите."),baseCost:{metal:35}},
+  farm:{n:T("Гидропонная ферма"),ic:"🥬",stat:"end",produces:"food",base:3.5,power:2,desc:T("Выращивает провизию под лампами."),baseCost:{metal:35}},
+  desal:{n:T("Опреснитель"),ic:"💧",stat:"int",produces:"water",base:3.5,power:2,desc:T("Забортная вода → питьевая."),baseCost:{metal:35}},
+  workshop:{n:T("Мастерская"),ic:"🔩",stat:"str",produces:"metal",base:1.5,power:4,desc:T("Переплавка обломков в металл. Здесь крафтят снаряжение."),baseCost:{metal:40,credits:20}},
+  market:{n:T("Торговый шлюз"),ic:"💠",stat:"cha",produces:"credits",base:1.5,power:4,desc:T("Торговля с проходящими субмаринами."),baseCost:{metal:40}},
+  lab:{n:T("Лаборатория"),ic:"🔬",stat:"int",produces:"research",base:0.5,power:3,desc:T("Генерирует очки исследований."),baseCost:{metal:55,credits:40}},
+  quarters:{n:T("Жилой отсек"),ic:"🛏",stat:"cha",produces:null,power:2,desc:T("+2 к лимиту населения. Харизма ускоряет прирост."),baseCost:{metal:30},popCap:2},
+  medbay:{n:T("Лазарет"),ic:"⛑",stat:"int",produces:null,power:4,desc:T("Лечит раненых членов экипажа."),baseCost:{metal:45,credits:20}},
   storage:{n:T("Склад"),ic:"📦",stat:null,produces:null,power:0,desc:T("+250 к запасу всех ресурсов."),baseCost:{metal:35}},
-  gym:{n:T("Тренировочный зал"),ic:"🏋",stat:null,produces:null,power:3,desc:T("Экипаж качает характеристики."),baseCost:{metal:45}},
-  hangar:{n:T("Ангар-шлюз"),ic:"🚪",stat:null,produces:null,power:3,desc:T("Открывает экспедиции в бездну. +1 слот за уровень."),baseCost:{metal:60,credits:40}},
-  armory:{n:T("Арсенал"),ic:"🛡",stat:"str",produces:null,power:3,desc:T("Усиливает оборону. Экипаж здесь даёт урон в бою."),baseCost:{metal:55,credits:30}},
+  gym:{n:T("Тренировочный зал"),ic:"🏋",stat:null,produces:null,power:4,desc:T("Экипаж качает характеристики."),baseCost:{metal:45}},
+  hangar:{n:T("Ангар-шлюз"),ic:"🚪",stat:null,produces:null,power:4,desc:T("Открывает экспедиции в бездну. +1 слот за уровень."),baseCost:{metal:60,credits:40}},
+  armory:{n:T("Арсенал"),ic:"🛡",stat:"str",produces:null,power:4,desc:T("Усиливает оборону. Экипаж здесь даёт урон в бою."),baseCost:{metal:55,credits:30}},
 };
 const BUILD_ORDER = ["reactor","oxygen","farm","desal","workshop","market","lab","quarters","medbay","storage","gym","hangar","armory"];
 
@@ -750,13 +965,13 @@ const CRAFT = {
 // Специализации экипажа
 const SPECS = {
   none:     {n:T("Новобранец"), ic:"👤", desc:T("Без специализации. Переобучите за кредиты."), rooms:[]},
-  engineer: {n:T("Инженер"),    ic:"🔧", rooms:["reactor","desal","lab"], bonus:0.6, desc:T("+60% в реакторе, опреснителе и лаборатории.")},
-  biologist:{n:T("Биолог"),     ic:"🧬", rooms:["oxygen","farm"], bonus:0.6, desc:T("+60% на кислородной станции и ферме.")},
-  soldier:  {n:T("Боец"),       ic:"⚔",  rooms:["armory"], bonus:0.5, combat:0.7, desc:T("+70% к урону в бою, +50% в арсенале.")},
-  scout:    {n:T("Разведчик"),  ic:"🧭", rooms:[], expedition:0.6, expRisk:0.5, desc:T("+60% к добыче и вдвое меньше риск в экспедициях.")},
-  mechanic: {n:T("Механик"),    ic:"⚙",  rooms:["workshop"], bonus:0.7, craft:true, desc:T("+70% в мастерской, дешевле крафт и выше шанс редкости.")},
-  medic:    {n:T("Медик"),      ic:"⛑",  rooms:["medbay"], bonus:0.6, heal:0.8, desc:T("+60% в лазарете, лечит намного быстрее.")},
-  trader:   {n:T("Торговец"),   ic:"💠", rooms:["market"], bonus:0.7, pop:1, desc:T("+70% в торговом шлюзе, ускоряет прирост населения.")},
+  engineer: {n:T("Инженер"),    ic:"🔧", rooms:["reactor","desal","lab"], bonus:0.4, desc:T("+60% в реакторе, опреснителе и лаборатории.")},
+  biologist:{n:T("Биолог"),     ic:"🧬", rooms:["oxygen","farm"], bonus:0.4, desc:T("+60% на кислородной станции и ферме.")},
+  soldier:  {n:T("Боец"),       ic:"⚔",  rooms:["armory"], bonus:0.5, combat:0.5, desc:T("+70% к урону в бою, +50% в арсенале.")},
+  scout:    {n:T("Разведчик"),  ic:"🧭", rooms:[], expedition:0.4, expRisk:0.5, desc:T("+60% к добыче и вдвое меньше риск в экспедициях.")},
+  mechanic: {n:T("Механик"),    ic:"⚙",  rooms:["workshop"], bonus:0.5, craft:true, desc:T("+70% в мастерской, дешевле крафт и выше шанс редкости.")},
+  medic:    {n:T("Медик"),      ic:"⛑",  rooms:["medbay"], bonus:0.4, heal:0.6, desc:T("+60% в лазарете, лечит намного быстрее.")},
+  trader:   {n:T("Торговец"),   ic:"💠", rooms:["market"], bonus:0.5, pop:0.6, desc:T("+70% в торговом шлюзе, ускоряет прирост населения.")},
 };
 const SPEC_KEYS=["engineer","biologist","soldier","scout","mechanic","medic","trader"];
 
@@ -831,15 +1046,15 @@ const FNAMES=[T("Ирис"),T("Кай"),T("Нора"),T("Тимур"),T("Лея"
 const LNAMES=[T("Волкова"),T("Крон"),T("Сато"),T("Мор"),T("Ласт"),T("Эйк"),T("Гейл"),T("Драго"),T("Норд"),T("Веспер"),T("Финн"),T("Раск"),T("Кио"),T("Стрэйт"),T("Оул"),T("Крейн")];
 
 /* ============================ СОСТОЯНИЕ ============================ */
-let S=null;
+let S=null; let confirmCb=null, confirmMsg=""; let lastAdTime=0;
 const KEY="abyss_nerey_save_v1";
 let uid=1; const nid=()=>uid++;
 
 function newGame(){
   uid=1;
   S={
-    t:0, lastSave:Date.now(),
-    res:{oxygen:120,power:60,food:120,water:120,metal:120,credits:60},
+    t:0, lastSave:Date.now(), rescueTimer:0,
+    res:{oxygen:220,power:140,food:220,water:220,metal:160,credits:80},
     research:0, researched:[],
     rooms:[], dwellers:[], expeditions:[],
     threat:0, attack:null, log:[], items:[],
@@ -853,12 +1068,12 @@ function newGame(){
   addRoom("farm",true);
   arrangeGrid();
   // стартовый экипаж (5 — чтобы после назначения троих в реактор/кислород/ферму осталось 2 свободных для экспедиции, не оголяя энергию)
-  for(let i=0;i<5;i++) S.dwellers.push(makeDweller());
-  S.dwellers.forEach(initDwellerHp); // без этого при «Начать заново» жители остаются с 0 HP и падают в раненых
-  // назначим
-  assignDweller(S.dwellers[0].id, S.rooms[1].id);
-  assignDweller(S.dwellers[1].id, S.rooms[2].id);
-  assignDweller(S.dwellers[2].id, S.rooms[3].id);
+  const d0=makeDweller(0,"engineer"), d1=makeDweller(0,"biologist"), d2=makeDweller(0,"biologist"), d3=makeDweller(), d4=makeDweller();
+  S.dwellers=[d0,d1,d2,d3,d4];
+  S.dwellers.forEach(initDwellerHp);
+  assignDweller(d0.id, S.rooms[1].id);
+  assignDweller(d1.id, S.rooms[2].id);
+  assignDweller(d2.id, S.rooms[3].id);
   logEvent(T("Станция «Нерей» запущена. Свет, вода, воздух — под вашим контролем."),"good");
   queueTut("welcome");
 }
@@ -925,7 +1140,7 @@ function migrateItems(){
 }
 function migrateRooms(){
   // старые отсеки без size → size=1. Карточку merge НЕ гасим: механика новая даже для опытного игрока.
-  (S.rooms||[]).forEach(r=>{ if(r.size==null) r.size=1; });
+  (S.rooms||[]).forEach(r=>{ if(r.size==null) r.size=1; if(r.stored==null) r.stored=0; });
   // назначить координаты сетки, если их нет (сейвы v3/v4 без floor/col)
   if((S.rooms||[]).some(r=>r.floor==null||r.col==null)) arrangeGrid();
   if(S.floors==null) S.floors=Math.max(2,maxFloor()+1);
@@ -934,7 +1149,7 @@ function migrateRooms(){
   S.buildTarget=null;
 }
 
-function makeDweller(boost){
+function makeDweller(boost,forcedSpec){
   const g=Math.random()<.5;
   const nm=pick(FNAMES)+" "+pick(LNAMES);
   const base=()=>1+Math.floor(Math.random()*3)+(boost||0);
@@ -942,7 +1157,7 @@ function makeDweller(boost){
     id:nid(), name:nm, ic: g?"🧑‍🚀":"👩‍🚀",
     stats:{str:base(),agi:base(),int:base(),end:base(),cha:base()},
     lvl:1, xp:0, hp:0, maxhp:0, room:null, weapon:null, suit:null,
-    status:"idle", train:null, exp:null, spec:pick(SPEC_KEYS),
+    status:"idle", train:null, exp:null, spec:forcedSpec||pick(SPEC_KEYS),
   };
   // hp set below
 }
@@ -997,7 +1212,14 @@ function popCap(){
   return c;
 }
 function roomCrewCap(r){ return (1+r.lvl)*(r.size||1); } // 2 на 1 ур, +1 за уровень, ×size за слияние
-function roomPowerUse(r){ const def=ROOMS[r.type]; return (def.power||0)*r.lvl*(1+((r.size||1)-1)*0.8); } // слитые чуть экономнее
+function roomPowerUse(r){
+  const def=ROOMS[r.type];
+  let p=(def.power||0)*r.lvl*(1+((r.size||1)-1)*0.8);   // слитые чуть экономнее
+  // Отсек без экипажа переходит в дежурный режим: он всё равно ничего не производит,
+  // поэтому не должен топить энергобаланс на полную. Иначе постройка = мгновенный минус.
+  if(def.power>0 && acceptsCrew(r) && roomCrew(r).length===0) p*=0.35;
+  return p;
+}
 function expeditionSlots(){ let s=0; S.rooms.forEach(r=>{if(r.type==="hangar")s+=r.lvl*(r.size||1);}); return s; }
 function hasRoom(type){ return S.rooms.some(r=>r.type===type); }
 
@@ -1029,6 +1251,7 @@ function addFloor(){
   pay(c); S.floors=floorCount()+1;
   logEvent(`${T("⚙ Пробурен новый этаж — уровень")} <b>${floorCount()}</b>${T(". Свободно")} ${FLOOR_W} ${T("отсека.")}`,"gold");
   toast(`${T("⚙ Этаж")} ${floorCount()} ${T("готов")}`,"good");
+  setTimeout(()=>YA.fullscreen(),500);
   render();
 }
 // Ручная установка отсека в конкретную клетку; слияние с соседом того же типа и уровня
@@ -1125,7 +1348,8 @@ function roomOutput(r){
   if(def.produces==="power") mult+=eff("powerMult");
   if(["oxygen","water","food"].includes(def.produces)) mult+=eff("lifeMult");
   const size=r.size||1;
-  const out=def.base*r.lvl*size*(1+contrib*0.22)*mult*(1+(size-1)*0.10);
+  const crewMult=crew.length>0?(1+contrib*0.22):0.05;
+  const out=def.base*r.lvl*size*crewMult*mult*(1+(size-1)*0.10);
   return out;
 }
 function buildCost(type){
@@ -1215,7 +1439,7 @@ function tickOnce(offline){
 
   // Потребление жизнеобеспечения
   const pop=S.dwellers.length;
-  const consume={oxygen:pop*0.6, food:pop*0.45, water:pop*0.45};
+  const consume={oxygen:pop*0.85, food:pop*0.6, water:pop*0.6};
   let crisis=[];
   for(const k in consume){
     S.res[k]-=consume[k];
@@ -1298,7 +1522,7 @@ function spawnAttack(offline){
   const m=pick(pool.length?pool:MONSTERS);
   const scale=1+ S.t/600;
   S.attack={name:m.n,ic:m.ic,hp:Math.ceil(m.hp*scale),maxhp:Math.ceil(m.hp*scale),dmg:m.dmg*scale};
-  logEvent(T("🚨 АТАКА: <b>")+m.n+T("</b> таранит станцию!"),"bad");
+  sfx("attack"); logEvent(T("🚨 АТАКА: <b>")+m.n+T("</b> таранит станцию!"),"bad");
   if(!offline) toast("🚨 "+m.n+T(" атакует станцию!"),"bad");
 }
 function crewDamage(){
@@ -1328,7 +1552,7 @@ function processCombat(offline){
     S.res.credits=clamp(S.res.credits+rew.credits,0,storageCap());
     S.research+=Math.ceil(a.maxhp*0.05);
     logEvent("✅ <b>"+a.name+T("</b> отбит! Трофеи: +")+rew.metal+" 🔩, +"+rew.credits+" 💠","good");
-    if(!offline) toast(T("✅ Тварь уничтожена! +")+rew.metal+"🔩 +"+rew.credits+"💠","good");
+    if(!offline){ toast(T("✅ Тварь уничтожена! +")+rew.metal+"🔩 +"+rew.credits+"💠","good"); setTimeout(()=>YA.fullscreen(),600); }
     S.attack=null; return;
   }
   // монстр бьёт: урон снижается бронёй/арсеналом
@@ -1369,8 +1593,8 @@ function startExpedition(did){
   d.room=null; d.status="expedition";
   const dur=45+Math.floor(Math.random()*40); // секунд
   S.expeditions.push({did, name:d.name, left:dur, dur, depth:1+Math.floor((S.t/300))});
-  logEvent("🚪 <b>"+d.name+T("</b> ушёл в экспедицию во тьму."),"");
-  closeModal(); render();
+  sfx("expedition"); logEvent("🚪 <b>"+d.name+T("</b> ушёл в экспедицию во тьму."),"");
+  closeModal(); checkQuest(); render();
 }
 function resolveExpedition(e,offline){
   const d=dwellerById(e.did); if(!d) return;
@@ -1400,7 +1624,7 @@ function resolveExpedition(e,offline){
   if(d.status!=="injured") d.status="idle";
   d.xp+=15;
   logEvent(msg, d.status==="injured"?"bad":"gold");
-  if(!offline) toast(msg,"good");
+  if(!offline){ toast(msg,"good"); setTimeout(()=>YA.fullscreen(),800); }
 }
 
 /* ============================ ПРОИСШЕСТВИЯ ============================ */
@@ -1479,6 +1703,7 @@ function renderNav(){
 function renderMain(){
   const m=$("main");
   let h="";
+  h+=powerWarning();
   h+=questBar();
   // мягкая обучающая карточка
   if(S.activeTut && TUT[S.activeTut]){
@@ -1680,7 +1905,7 @@ function renderTech(){
 
 function renderLog(){
   let h=`<div class="panelTitle">${T("Журнал станции")}</div>`;
-  h+=`<div class="card"><div class="row between" style="flex-wrap:wrap;gap:6px"><button class="btn sm" onclick="saveGame(true)">${T("💾 Сохранить")}</button><button class="btn sm" onclick="exportSave()">${T("⬇ Экспорт")}</button><button class="btn sm" onclick="importSave()">${T("⬆ Импорт")}</button><button class="btn sm warnb" onclick="hardReset()">${T("🗑 Заново")}</button></div><div class="row" style="gap:6px;margin-top:8px"><span class="small mut">${T("Язык / Language")}</span><button class="btn sm ${LANG==="ru"?"gold":""}" onclick="setLang('ru')">RU</button><button class="btn sm ${LANG==="en"?"gold":""}" onclick="setLang('en')">EN</button></div><div class="small mut" style="margin-top:8px">${T("Прогресс автосохраняется и продолжает идти, пока вас нет.")}</div></div>`;
+  h+=`<div class="card"><div class="row between" style="flex-wrap:wrap;gap:6px"><button class="btn sm" onclick="saveGame(true)">${T("💾 Сохранить")}</button><button class="btn sm" onclick="exportSave()">${T("⬇ Экспорт")}</button><button class="btn sm" onclick="importSave()">${T("⬆ Импорт")}</button><button class="btn sm warnb" onclick="hardReset()">${T("🗑 Заново")}</button><button class="btn sm" onclick="toggleMute()">${audioMuted?"🔇":"🔊"}</button><button class="btn sm ${musicOn&&!audioMuted?"gold":""}" onclick="toggleMusic()">🎵</button></div><div class="row" style="gap:6px;margin-top:8px"><span class="small mut">${T("Язык / Language")}</span><button class="btn sm ${LANG==="ru"?"gold":""}" onclick="setLang('ru')">RU</button><button class="btn sm ${LANG==="en"?"gold":""}" onclick="setLang('en')">EN</button></div><div class="small mut" style="margin-top:8px">${T("Прогресс автосохраняется и продолжает идти, пока вас нет.")}</div></div>`;
   h+=`<div class="card">`;
   if(!S.log.length) h+=`<p>${T("Пока тихо...")}</p>`;
   S.log.forEach(l=>{ h+=`<div class="logline ${l.cls}">${l.txt}</div>`; });
@@ -1690,7 +1915,18 @@ function renderLog(){
 
 /* ============================ МОДАЛКИ ============================ */
 function openModal(html){ $("sheet").innerHTML=`<div class="grip"></div>`+html; $("modal").classList.add("show"); try{ applyQuestHighlight(); }catch(e){} }
-function closeModal(){ $("modal").classList.remove("show"); try{ applyQuestHighlight(); }catch(e){} }
+function closeModal(){ $("modal").classList.remove("show"); confirmCb=null; try{ applyQuestHighlight(); }catch(e){} }
+function openConfirm(msg,onOk){
+  confirmCb=onOk; confirmMsg=msg;
+  const h=`<h2 style="text-align:center;margin-bottom:8px">${msg}</h2>
+    <div class="row" style="gap:10px;justify-content:center;margin-top:14px">
+      <button class="btn warnb" style="min-width:100px" onclick="closeConfirm()">${T("Отмена")}</button>
+      <button class="btn gold" style="min-width:100px" onclick="doConfirm()">${T("Да")}</button>
+    </div>`;
+  openModal(h);
+}
+function closeConfirm(){ confirmCb=null; closeModal(); }
+function doConfirm(){ if(confirmCb){ const cb=confirmCb; confirmCb=null; closeModal(); cb(); } }
 $("modal").addEventListener("click",e=>{ if(e.target.id==="modal") closeModal(); });
 
 let curRoom=null;
@@ -1849,9 +2085,9 @@ function doBuild(type){
     logEvent(`🏗 <b>${ROOMS[type].n}</b> ${T("пристроен к однотипному и объединён — теперь ×")}${res.merged.size}.`,"gold");
     toast(`⧉ ${ROOMS[type].n} ×${res.merged.size}`,"good");
   } else {
-    logEvent(T("🏗 Построен отсек: <b>")+ROOMS[type].n+"</b>.","good");
+    sfx("build"); logEvent(T("🏗 Построен отсек: <b>")+ROOMS[type].n+"</b>.","good");
   }
-  setTab("station");
+  setTab("station"); checkQuest();
 }
 function doUpgrade(id){
   const r=roomById(id);
@@ -1866,11 +2102,11 @@ function doUpgrade(id){
     logEvent(`✦ «${ROOMS[r.type].n}${T("» вышел на новую ступень —")} <b>${TIER_NAMES[newTier-1]}</b> ${tierStars(r.lvl)}`,"gold");
     toast(`✦ ${ROOMS[r.type].n}: ${TIER_NAMES[newTier-1]} ${"★".repeat(newTier)}`,"good");
   } else {
-    logEvent("▲ «"+ROOMS[r.type].n+T("» улучшен до ур.")+r.lvl+".","good");
+    sfx("upgrade"); logEvent("▲ «"+ROOMS[r.type].n+T("» улучшен до ур.")+r.lvl+".","good");
   }
   const m=mergeAdjacent(r); // если рядом такой же отсек того же уровня — объединятся
   if(m){ logEvent(`⧉ «${ROOMS[m.type].n}${T("» объединён с соседним того же уровня — теперь ×")}${m.size}.`,"gold"); toast(`⧉ ${ROOMS[m.type].n} ×${m.size}`,"good"); }
-  openRoom((m||r).id); render();
+  openRoom((m||r).id); checkQuest(); render();
 }
 function demolish(id){
   const r=roomById(id);
@@ -1880,7 +2116,7 @@ function demolish(id){
   // частичный возврат
   const back=Math.floor(20*r.lvl*(r.size||1)); S.res.metal=clamp(S.res.metal+back,0,storageCap());
   logEvent(T("Отсек «")+ROOMS[r.type].n+T("» демонтирован (+")+back+" 🔩).","");
-  closeModal(); render();
+  closeModal(); checkQuest(); render();
 }
 function doResearch(k){
   const r=RESEARCH[k];
@@ -1888,7 +2124,7 @@ function doResearch(k){
   S.research-=r.cost; S.researched.push(k);
   logEvent(T("🔬 Изучено: <b>")+r.n+"</b>.","gold");
   toast(T("🔬 Открытие: ")+r.n,"good");
-  render();
+  render(); checkQuest();
 }
 function craftDiscount(ws){ return (ws&&roomCrew(ws).some(d=>d.spec==="mechanic"))?0.8:1; }
 function craftItem(ck){
@@ -1906,7 +2142,7 @@ function craftItem(ck){
   logEvent(`${T("🔧 Собрано:")} <b>${label}</b>${T(". Наденьте на экипаж.")}`, rar==="common"?"good":"gold");
   toast(`🔧 ${it.ic} ${label}`,"good");
   queueTut("gear");
-  openRoom(curRoom);
+  openRoom(curRoom); checkQuest();
 }
 function equip(did,itemId){
   const d=dwellerById(did); const it=itemById(itemId);
@@ -1914,12 +2150,12 @@ function equip(did,itemId){
   const slot=CRAFT[it.key].type==="weapon"?"weapon":"suit";
   d[slot]=it.id; initDwellerHp(d);
   toast(d.name+T(" надел ")+CRAFT[it.key].ic+" "+RARITY[it.rar].n+" "+CRAFT[it.key].n,"good");
-  openDweller(did);
+  openDweller(did); checkQuest();
 }
 function unequip(did,slot){
   const d=dwellerById(did); if(!d) return;
   d[slot]=null; initDwellerHp(d);
-  openDweller(did);
+  openDweller(did); checkQuest();
 }
 
 /* ============================ TAB / RENDER LOOP ============================ */
@@ -2026,7 +2262,7 @@ function questGoTab(q){
 }
 function questIdx(){ return S.questIdx==null ? 0 : S.questIdx; }
 function currentQuest(){ const i=questIdx(); return (i>=0 && i<QUESTS.length) ? QUESTS[i] : null; }
-function skipTutorial(){ if(!confirm(T("Скрыть обучение насовсем? Подсказки-задачи больше не появятся."))) return; S.questIdx=-1; toast(T("Обучение скрыто"),"good"); render(); }
+function skipTutorial(){ openConfirm(T("Скрыть обучение насовсем? Подсказки-задачи больше не появятся."),()=>{ S.questIdx=-1; toast(T("Обучение скрыто"),"good"); render(); }); }
 function checkQuest(){
   const q=currentQuest(); if(!q) return;
   let ok=false; try{ ok=q.check(); }catch(e){ ok=false; }
@@ -2037,6 +2273,22 @@ function checkQuest(){
   S.questIdx=questIdx()+1;
   logEvent(`${T("🎯 Задача выполнена:")} <b>${T(q.t)}</b>. ${rewTxt}`,"gold");
   toast(`${T("🎯 Готово!")} ${rewTxt}`,"good");
+}
+// Дефицит энергии раньше был невидим: числа краснели, производство падало, а почему — непонятно.
+function powerWarning(){
+  if(!S || !S.rooms.length) return "";
+  let prod=0, use=0;
+  S.rooms.forEach(r=>{ const def=ROOMS[r.type];
+    if(def.produces==="power") prod+=roomOutput(r); else use+=roomPowerUse(r); });
+  if(use<=prod) return "";
+  const lossPct=Math.round((1-clamp(prod/use,0.15,1))*100);
+  if(lossPct<5 && S.res.power>40) return "";
+  const critical = S.res.power<=1;
+  return `<div class="card" style="border-color:${critical?'var(--warn)':'rgba(255,206,84,.5)'};background:linear-gradient(180deg,rgba(255,120,60,.12),rgba(10,20,34,.6))">
+    <div class="row between"><span style="font-weight:700;color:${critical?'var(--warn)':'var(--gold)'}">${T("⚡ Энергии не хватает")}</span>
+    <span class="small mut">${prod.toFixed(1)} / ${use.toFixed(1)} ⚡${T("/с")}</span></div>
+    <p class="small" style="margin:4px 0 0">${T("Отсеки работают вполсилы. Улучшите реактор или постройте второй — и поставьте в него людей.")}${critical?` <b style="color:var(--warn)">−${lossPct}%</b>`:''}</p>
+  </div>`;
 }
 function questBar(){
   const q=currentQuest(); if(!q) return "";
@@ -2104,7 +2356,10 @@ const YA = {
   // межстраничная реклама — вызывается на естественных паузах
   fullscreen(){
     if(!this.ready) return;
-    try{ this.sdk.adv.showFullscreenAdv({ callbacks:{ onError:()=>{} } }); }catch(e){}
+    const now=Date.now();
+    if(now-lastAdTime < 60000) return; // не чаще раза в 60 сек
+    lastAdTime=now;
+    try{ this.sdk.adv.showFullscreenAdv({ callbacks:{ onOpen:()=>{adPlaying=true;stopDrone();stopMusic();}, onClose:()=>{adPlaying=false;startDrone();startMusic();}, onError:()=>{adPlaying=false;startDrone();startMusic();} } }); }catch(e){ adPlaying=false; startDrone(); }
   },
   // видео с наградой: onDone вызывается только при полном просмотре
   rewarded(onDone){
@@ -2112,11 +2367,12 @@ const YA = {
     let got=false;
     try{
       this.sdk.adv.showRewardedVideo({ callbacks:{
+        onOpen: ()=>{ adPlaying=true; stopDrone(); stopMusic(); },
         onRewarded: ()=>{ got=true; },
-        onClose: ()=>{ if(got){ onDone(); render(); } },
-        onError: ()=>{ toast(T("Реклама недоступна"),"bad"); }
+        onClose: ()=>{ adPlaying=false; startDrone(); startMusic(); if(got){ onDone(); render(); } },
+        onError: ()=>{ adPlaying=false; startDrone(); startMusic(); toast(T("Реклама недоступна"),"bad"); }
       }});
-    }catch(e){ toast(T("Реклама недоступна"),"bad"); }
+    }catch(e){ adPlaying=false; startDrone(); toast(T("Реклама недоступна"),"bad"); }
   }
 };
 
@@ -2205,7 +2461,7 @@ function offlineProgress(){
     let msg=`${T("🌊 Пока вас не было (")}${mins} ${T("мин):")} `+ (diff.length?diff.join("  "):T("без изменений"));
     if(newPop>0) msg+=`  👥+${newPop}`;
     toast(msg,"good"); logEvent(msg,"");
-    if(mins>=10 && !YA.introShown){ YA.introShown=true; setTimeout(()=>YA.fullscreen(),1800); }
+    if(mins>=10 && !YA.introShown){ YA.introShown=true; }
   },400);
 }
 function exportSave(){
@@ -2228,9 +2484,10 @@ function importSave(){
   inp.click();
 }
 function hardReset(){
-  if(!confirm(T("Начать заново? Текущий прогресс будет удалён."))) return;
-  try{localStorage.removeItem(KEY);}catch(e){}
-  newGame(); render();
+  openConfirm(T("Начать заново? Текущий прогресс будет удалён."),()=>{
+    try{localStorage.removeItem(KEY);}catch(e){}
+    newGame(); render();
+  });
 }
 
 /* ============================ СТАРТ ============================ */
@@ -2242,8 +2499,8 @@ function boot(){
 }
 applyStaticI18n();
 YA.init();
-document.getElementById("startBtn").onclick=()=>{ newGame(); boot(); saveGame(); };
-document.getElementById("loadBtn").onclick=()=>{ if(loadGame()){ boot(); } else { toast(T("Сохранение не найдено"),"bad"); } };
+document.getElementById("startBtn").onclick=()=>{ ensureAudio(); startDrone(); startMusic(); newGame(); boot(); saveGame(); };
+document.getElementById("loadBtn").onclick=()=>{ ensureAudio(); startDrone(); startMusic(); if(loadGame()){ boot(); } else { toast(T("Сохранение не найдено"),"bad"); } };
 
 // проверка наличия сейва для подсказки (локально или в облаке)
 function refreshIntroHint(){
@@ -2258,7 +2515,10 @@ refreshIntroHint();
 setInterval(()=>{ if(S){ tickOnce(false); render(); } },1000);
 setInterval(()=>{ if(S) saveGame(false); },15000);
 window.addEventListener("beforeunload",()=>{ if(S){ saveGame(false); YA.saveCloud(true); } });
-document.addEventListener("visibilitychange",()=>{ if(document.hidden && S){ saveGame(false); YA.saveCloud(true); } });
+document.addEventListener("visibilitychange",()=>{
+  if(document.hidden){ stopDrone(); stopMusic(); if(S){ saveGame(false); YA.saveCloud(true); } }
+  else if(!adPlaying){ startDrone(); startMusic(); }
+});
 
 // пузырьки для атмосферы
 (function(){
@@ -2276,7 +2536,7 @@ document.addEventListener("visibilitychange",()=>{ if(document.hidden && S){ sav
 })();
 
 // экспорт функций в глобал (для onclick)
-Object.assign(window,{setTab,pickCell,clearTarget,addFloor,skipTutorial,applyQuestHighlight,adBoost,adHeal,adRush,setLang,openRoom,openDweller,doBuild,doUpgrade,demolish,doResearch,craftItem,equip,unequip,assignDweller,startExpedition,rushDefense,saveGame,exportSave,importSave,hardReset,closeModal,dismissTut,openRespec,doRespec});
+Object.assign(window,{setTab,toggleMusic,pickCell,clearTarget,addFloor,skipTutorial,applyQuestHighlight,adBoost,adHeal,adRush,setLang,openRoom,openDweller,doBuild,doUpgrade,demolish,doResearch,craftItem,equip,unequip,assignDweller,startExpedition,rushDefense,saveGame,exportSave,importSave,hardReset,closeModal,dismissTut,openRespec,doRespec});
 </script>
 </body>
 </html>
