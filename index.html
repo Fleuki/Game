@@ -498,10 +498,41 @@ setInterval(()=>{
   if(S && Math.random()<0.25) sfx('bubble');
 }, 4000);
 
-/* ================= ТЕКСТЫ =================
-   Игра выпускается только на русском языке (п. 8.2.3 требований платформы):
-   английская локализация и переключатель языка убраны. T() оставлена как
-   тождественная обёртка, чтобы не переписывать все точки вывода текста. */
+/* ================= ЯЗЫК И ТЕКСТЫ =================
+   Игра выпускается только на русском (п. 8.2.3): английской локализации нет.
+   Но язык интерфейса всё равно определяется у платформы (п. 2.14) — через
+   ysdk.environment.i18n.lang. Любое значение, которого игра не поддерживает,
+   а также отсутствие или сбой SDK дают фоллбэк на 'ru'. */
+const SUPPORTED_LANGS = ["ru"];
+const DEFAULT_LANG = "ru";
+let LANG = DEFAULT_LANG;
+
+// Приводит что угодно к поддерживаемому коду языка. Никогда не бросает исключений.
+function normalizeLang(raw){
+  try{
+    if(typeof raw !== "string") return DEFAULT_LANG;
+    // Платформа может прислать код с регионом или регистром: 'RU', 'ru-RU', 'ru_RU'.
+    const base = raw.trim().toLowerCase().split(/[-_]/)[0];
+    return SUPPORTED_LANGS.indexOf(base) >= 0 ? base : DEFAULT_LANG;
+  }catch(e){ return DEFAULT_LANG; }
+}
+
+// Читает язык у SDK. Работает и когда SDK не инициализировался: тогда вернётся 'ru'.
+function detectLang(sdk){
+  try{
+    return normalizeLang(sdk && sdk.environment && sdk.environment.i18n && sdk.environment.i18n.lang);
+  }catch(e){ return DEFAULT_LANG; }
+}
+
+function applyLanguage(lang){
+  LANG = normalizeLang(lang);
+  try{ document.documentElement.lang = LANG; }catch(e){}
+  return LANG;
+}
+applyLanguage(DEFAULT_LANG);   // до ответа SDK интерфейс уже на русском
+
+/* T() — тождественная обёртка: перевода нет, но все точки вывода текста
+   проходят через неё, поэтому добавить язык позже можно без правки вызовов. */
 function T(s){ return s; }
 
 /* ============================ ДАННЫЕ ============================ */
@@ -1937,6 +1968,8 @@ const YA = {
       this.ready = true;
       // сигнал платформе, что игра загрузилась
       try{ this.sdk.features.LoadingAPI.ready(); }catch(e){}
+      // п. 2.14 — язык интерфейса берём у платформы; неподдерживаемый код даёт 'ru'
+      applyLanguage(detectLang(this.sdk));
       // облачные сейвы
       try{
         this.player = await this.sdk.getPlayer({ scopes:false });
